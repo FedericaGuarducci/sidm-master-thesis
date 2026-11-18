@@ -102,7 +102,7 @@ public:
         b(1.385),
         c(0.753),
         // sigma is the normalized SIDM cross section (sigma/m)*rho_s*r_s
-        sigma(0.05),
+        sigma(0.5),
         // mass_norm is the normalized baryon mass, M_b/(4*pi*rho_s*r_s^3)
         mass_norm(0.1),
         // scale_norm is the normalized baryon scale radius, a/r_s
