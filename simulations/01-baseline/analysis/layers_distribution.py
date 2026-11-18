@@ -20,8 +20,8 @@ target_filepath = (
     BASE_DIR / ".." / "spl" / "results" / "result_20261007-180layers.txt"
 ).resolve()
 
-# Scale radius r_s (modify if r_s != 1.0 in dimensionless units)
-R_S = 1.0
+# Scale radius r_s 
+R_S = 3.2
 
 if not target_filepath.exists():
     raise FileNotFoundError(f"Could not find target file: {target_filepath}")
