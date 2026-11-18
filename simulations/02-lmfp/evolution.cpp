@@ -401,7 +401,7 @@ public:
                 updateProfiles();
 
                 if (std::isnan(state.RList(0)) || std::isnan(state.uList(0)) || std::isnan(state.LList(0))) {
-    logger.error("NaN rilevato allo step " + std::to_string(tstep) + 
+    logger.error("NaN detected at step " + std::to_string(tstep) + 
                  " | t = " + std::to_string(params.totalTime) +
                  " | Rho(0) = " + std::to_string(state.RhoList(0)) +
                  " | L(0) = " + std::to_string(state.LList(0)));
