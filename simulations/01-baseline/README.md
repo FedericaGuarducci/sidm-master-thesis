@@ -10,6 +10,7 @@ The numerical framework and gravothermal fluid solver are adapted from the publi
 01-baryon-profiles/
 ├── README.md        # Overview, physical models, and execution guide
 ├── spl/             # Literature benchmark: Single Power-Law (SPL) baryon profile
+    ├── lmfp/        # Further studies on LMFP for SPL
 ├── plummer/         # Thesis extension: Plummer baryon profile
 ├── hernquist/       # Thesis extension: Hernquist baryon profile
 └── analysis/        # Post-processing, convergence checks, and physical-unit plotting scripts
