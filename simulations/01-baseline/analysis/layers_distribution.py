@@ -1,6 +1,3 @@
-import glob
-import os
-import re
 from pathlib import Path
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -8,21 +5,23 @@ import numpy as np
 from scipy.interpolate import UnivariateSpline
 
 # ==============================================================================
-# CONFIGURAZIONE RENDERING GRAFICO (LaTeX Look & Feel senza dipendenze esterne)
+# GRAPHICAL RENDERING CONFIGURATION (LaTeX Look & Feel without external deps)
 # ==============================================================================
 plt.rcParams["text.usetex"] = False
 plt.rcParams["font.family"] = "serif"
-plt.rcParams["mathtext.fontset"] = "cm"  # Usa il font Computer Modern nativo di LaTeX
+plt.rcParams["mathtext.fontset"] = "cm"  # Use native LaTeX Computer Modern font
 
 # ==============================================================================
-# CONFIGURAZIONE PERCORSI E PARAMETRI FISICI
+# PATHS AND PHYSICAL PARAMETERS CONFIGURATION
 # ==============================================================================
-target_filepath = Path(
-    r"C:\Users\feddy\Desktop\FedeFISICA\Gaggero\Programmi\9-CNNoBaryons\CN-nobarLayering\results8\result_20261006_180Layers_nobar.txt"
-)
+# Resolve path relative to this script's directory (e.g., inside analysis/)
+BASE_DIR = Path(__file__).resolve().parent
+target_filepath = (
+    BASE_DIR / ".." / "spl" / "results" / "result_20261007-180layers.txt"
+).resolve()
 
-# Raggio di scala r_s (modificare se r_s != 10.0 kpc)
-R_S = 3.2
+# Scale radius r_s (modify if r_s != 1.0 in dimensionless units)
+R_S = 1.0
 
 if not target_filepath.exists():
     raise FileNotFoundError(f"Could not find target file: {target_filepath}")
@@ -31,14 +30,18 @@ print(f"[INFO] Target file selected: {target_filepath.name}")
 
 
 def find_inflection_radius(m_arr, rho_arr, r_norm_arr):
-    """1. Identifica la massa di flesso M_inflect da log10(rho) vs log10(M).
-    2. Interpola il corrispondente raggio di flesso adimensionale (r/r_s)_inflect.
+    """1. Identify the inflection mass M_inflect from log10(rho) vs log10(M).
+    2. Interpolate the corresponding dimensionless inflection radius (r/r_s)_inflect.
     """
     if len(m_arr) == 0 or len(rho_arr) == 0 or len(r_norm_arr) == 0:
         return None, None
     if not (len(m_arr) == len(rho_arr) == len(r_norm_arr)):
         min_len = min(len(m_arr), len(rho_arr), len(r_norm_arr))
-        m_arr, rho_arr, r_norm_arr = m_arr[:min_len], rho_arr[:min_len], r_norm_arr[:min_len]
+        m_arr, rho_arr, r_norm_arr = (
+            m_arr[:min_len],
+            rho_arr[:min_len],
+            r_norm_arr[:min_len],
+        )
 
     valid_mask = (r_norm_arr > 1e-6) & (m_arr > 1e-6) & (rho_arr > 0)
 
@@ -97,7 +100,7 @@ def find_inflection_radius(m_arr, rho_arr, r_norm_arr):
 
 
 # ==============================================================================
-# FASE 1 & 2: SCANSIONE TOTALE E SELEZIONE DI ESATTAMENTE 8 SNAPSHOT
+# PHASE 1 & 2: FULL FILE SCAN AND SELECTION OF EXACTLY 8 SNAPSHOTS
 # ==============================================================================
 block_offsets = []
 
@@ -219,7 +222,7 @@ for snap in parsed_snapshots:
 print()
 
 # ==============================================================================
-# FASE 3: GENERAZIONE GRAFICI (GRIGLIA 2x4)
+# PHASE 3: PLOT GENERATION (2x4 GRID)
 # ==============================================================================
 r_all = [d["R_norm"] for d in parsed_snapshots]
 rmin = min([np.min(r) for r in r_all if np.min(r) > 0])
@@ -284,10 +287,14 @@ for i, (data, color) in enumerate(zip(parsed_snapshots, colors)):
     ax.set_title(f"{main_title}\n{subtitle_text}", fontsize=8.5)
     ax.grid(True, which="both", ls="--", alpha=0.4)
 
+# Hide unused subplots if fewer than 8 snapshots were selected
+for j in range(len(parsed_snapshots), len(axes)):
+    axes[j].set_visible(False)
+
 fig.supxlabel(r"$r / r_s$", fontsize=12)
 fig.supylabel("Layer Count per Bin", fontsize=12)
 fig.suptitle(
-    "Selected 8 Snapshots of Layer Redistribution (Including Final)",
+    f"Selected {len(parsed_snapshots)} Snapshots of Layer Redistribution (Including Final)",
     fontsize=13,
     y=0.98,
 )
