@@ -115,8 +115,8 @@ public:
         
         // Set default directories for input and output files
         // Note: Adjust these paths as per your directory structure
-        inputDir = "C:/Users/feddy/Desktop/FedeFISICA/Gaggero/Programmi/initial/" + tag + "/";
-outputFile = "C:/Users/feddy/Desktop/FedeFISICA/Gaggero/Programmi/results/result_" + tag + ".txt";
+        inputDir = "./initial/" + tag + "/";
+outputFile = "./results/result_" + tag + ".txt";
     }
     
     // Display parameters to console
