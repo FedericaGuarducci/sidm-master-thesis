@@ -38,6 +38,6 @@ This directory contains the core scientific papers and background references sup
 | `McKinney_et_al_2013.pdf` | McKinney et al. (2013) | 3D general relativistic radiation MHD (GRRMHD) simulations of super-Eddington accretion. |
 | `Alexander_Natarajan_2014.pdf` | Alexander & Natarajan (2014) | Rapid growth of light seed black holes via supra-exponential accretion in dense nuclear clusters. |
 | `Sadowski_et_al_2014.pdf` | Sądowski et al. (2014) | Axisymmetric GRRMHD simulations of radiative accretion disks with sub-grid magnetic dynamo. |
-| `Inayoshi_et_al_2019.pdf` | Inayoshi, Visbal & Haiman (2020) | Comprehensive review on the assembly, seeding channels, and growth of the first massive black holes. |
+| `Inayoshi_et_al_2019.pdf` | Inayoshi, Visbal & Haiman (2019) | Comprehensive review on the assembly, seeding channels, and growth of the first massive black holes. |
 | `Matsuoka_et_al_2019.pdf` | Matsuoka et al. (2019) | Discovery of a low-luminosity quasar at $z > 7$, constraining early SMBH growth models. |
 | `Feng_et_al_2025_little_red_dots.pdf` | Feng, Yu & Zhong (2025) | Baryon-aided dark Bondi accretion in gravothermally collapsed SIDM halos as the origin of JWST *Little Red Dots*. |
