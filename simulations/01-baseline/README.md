@@ -40,10 +40,12 @@ Each subdirectory implements a different analytical static baryonic density *ρ*
 
 In the standard fluid formulation, the conductive luminosity *L*<sub>&chi;</sub> interpolates between the Short Mean Free Path (SMFP) and Long Mean Free Path (LMFP) regimes via an effective conductivity *&kappa;*<sub>eff</sub> = (*&kappa;*<sub>SMFP</sub><sup>&minus;1</sup> + *&kappa;*<sub>LMFP</sub><sup>&minus;1</sup>)<sup>&minus;1</sup>:
 
+
 - **SMFP Regime (Kn<sub>&chi;</sub> &ll; 1):**
   *L*<sub>SMFP</sub> = &minus;4&pi;*r*<sup>2</sup> &middot; (3*b* / 2) &middot; (*v*<sub>1D</sub> / *&sigma;*) &middot; &part;*v*<sub>1D</sub><sup>2</sup>/&part;*r*
 - **LMFP Regime (Kn<sub>&chi;</sub> &gg; 1):**
-  *L*<sub>LMFP</sub> = &minus;4&pi;*r*<sup>2</sup> &middot; (3*a* / 2) &middot; *c* &middot; *&sigma;* &middot; *&rho;*<sub>&chi;</sub><sup>2</sup> &middot; *v*<sub>1D</sub><sup>3</sup> &middot; (4&pi;*G* *r*<sub>s</sub><sup>2</sup> *&rho;*<sub>s</sub>)<sup>&minus;1</sup> &middot; &part;*v*<sub>1D</sub><sup>2</sup>/&part;*r*
+  *L*<sub>LMFP</sub> = &minus;4&pi;*r*<sup>2</sup> &middot; (3*a* / 2) &middot; *c* &middot; *&sigma;* &middot; *&rho;*<sub>&chi;</sub><sup>2</sup> &middot; *v*<sub>1D</sub><sup>3</sup> &middot; &part;*v*<sub>1D</sub><sup>2</sup>/&part;*r*
+
 
 The `spl/lmfp/` subdirectory isolates and investigates the **LMFP-dominated evolution** (corresponding to the conduction term implemented in `initialization.py` and `evolution.cpp` with *c* = `0.753`), neglecting the SMFP saturation limit (`1 / sigma` term) to study core-collapse dynamics in the weakly collisional limit.
 
