@@ -5,19 +5,16 @@ This directory contains the 1D gravothermal fluid simulation pipelines used to i
 The numerical framework and gravothermal fluid solver are adapted from the public repository [`ymzhong/gravothermal`](https://github.com/ymzhong/gravothermal) (accompanying Feng et al., 2025), extended here to compare multiple analytical baryonic distributions.
 
 ## Directory Structure
-
-```text
-01-baryon-profiles/
+```
+01-baseline/
 ├── README.md        # Overview, physical models, and execution guide
 ├── spl/             # Literature benchmark: Single Power-Law (SPL) baryon profile
-    ├── lmfp/        # Further studies on LMFP for SPL
+│   ├── lmfp/        # Long Mean Free Path (LMFP) regime studies for SPL
+│   ├── initialization.py
+│   └── evolution.cpp
 ├── plummer/         # Thesis extension: Plummer baryon profile
 ├── hernquist/       # Thesis extension: Hernquist baryon profile
-└── analysis/        # Post-processing, convergence checks, and physical-unit plotting scripts
-    ├── convergence_layers.py   # Layer-count convergence study at fixed central density
-    ├── dimensionless_units.py  # Evolution of dimensionless density vs. enclosed mass profiles
-    ├── layers_distribution.py  # Radial shell distribution
-    └── physical_units.py       # Rescaling to physical astrophysical units (kpc, M_sun, Myr)
+
 ```
 
 ## Physical Models
