@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////
 // Use Eigen library as the linear equation solver                                            //
-// add static plummer baryons to the NFW dark matter halo
+// add static SPL baryons to the NFW dark matter halo
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define _USE_MATH_DEFINES
@@ -112,8 +112,8 @@ public:
         
         // Set default directories for input and output files
         // Note: Adjust these paths as per your directory structure
-        inputDir = "C:/Users/feddy/Desktop/FedeFISICA/Gaggero/Programmi/10-LMFP/CodiceStandard/initial/" + tag + "/";
-outputFile = "C:/Users/feddy/Desktop/FedeFISICA/Gaggero/Programmi/10-LMFP/CodiceStandard/results/result_" + tag + ".txt";
+        inputDir = "./initial/" + tag + "/";
+outputFile = "./results/result_" + tag + ".txt";
     }
     
     // Display parameters to console
@@ -259,7 +259,7 @@ public:
             // Set initial 1D velocity dispersion
             vList = std::sqrt(2.0/3.0) * uList.sqrt();
             
-            // Add baryon mass, default is Plummer model
+            // Add baryon mass, default is SPL model
             for (int i = 0; i < (NoLayers-1); i++) {
                 MhyList(i) = MList(i) + MbaryonSPL(RList(i), params.mass_norm);
             }
