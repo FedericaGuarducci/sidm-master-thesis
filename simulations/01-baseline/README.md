@@ -10,8 +10,8 @@ The numerical framework and gravothermal fluid solver are adapted from the publi
 01-baryon-profiles/
 ├── README.md        # Overview, physical models, and execution guide
 ├── spl/             # Literature benchmark: Single Power-Law (SPL) baryon profile
-├── plummer/         # Thesis extension: Cored Plummer baryon sphere
-└── hernquist/       # Thesis extension: Cuspy Hernquist baryon sphere
+├── plummer/         # Thesis extension: Plummer baryon profile
+└── hernquist/       # Thesis extension: Hernquist baryon profile
 ```
 
 ## Physical Models
@@ -32,8 +32,8 @@ Each subdirectory implements a different analytical static baryonic density *ρ*
 | Subdirectory | Baryon Profile | Role in Thesis | Normalized Density *ρ*<sub>b</sub>(*r*) | Normalized Enclosed Mass *M*<sub>b</sub>(*r*) |
 | :--- | :--- | :--- | :--- | :--- |
 | `spl/` | Single Power-Law (SPL) | Benchmark (Feng et al., 2025) | 0.07 &middot; *r*<sup>&minus;2.4</sup> | *M*<sub>0</sub> &middot; *r*<sup>0.6</sup> |
-| `plummer/` | Plummer Sphere | Exploratory Extension (Cored) | (3*M*<sub>0</sub> / *a*<sub>s</sub><sup>3</sup>) &middot; (1 + *r*<sup>2</sup>/*a*<sub>s</sub><sup>2</sup>)<sup>&minus;5/2</sup> | *M*<sub>0</sub> &middot; (1 + *a*<sub>s</sub><sup>2</sup>/*r*<sup>2</sup>)<sup>&minus;3/2</sup> |
-| `hernquist/` | Hernquist Sphere | Exploratory Extension (Cuspy) | (2*M*<sub>0</sub>*a*<sub>s</sub>) / [*r*(*r* + *a*<sub>s</sub>)<sup>3</sup>] | *M*<sub>0</sub> &middot; (1 + *a*<sub>s</sub>/*r*)<sup>&minus;2</sup> |
+| `plummer/` | Plummer | Exploratory Extension | (3*M*<sub>0</sub> / *a*<sub>s</sub><sup>3</sup>) &middot; (1 + *r*<sup>2</sup>/*a*<sub>s</sub><sup>2</sup>)<sup>&minus;5/2</sup> | *M*<sub>0</sub> &middot; (1 + *a*<sub>s</sub><sup>2</sup>/*r*<sup>2</sup>)<sup>&minus;3/2</sup> |
+| `hernquist/` | Hernquist | Exploratory Extension | (2*M*<sub>0</sub>*a*<sub>s</sub>) / [*r*(*r* + *a*<sub>s</sub>)<sup>3</sup>] | *M*<sub>0</sub> &middot; (1 + *a*<sub>s</sub>/*r*)<sup>&minus;2</sup> |
 
 ## Prerequisites
 
