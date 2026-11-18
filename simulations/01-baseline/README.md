@@ -9,9 +9,7 @@ The numerical framework and gravothermal fluid solver are adapted from the publi
 01-baseline/
 ├── README.md        # Overview, physical models, and execution guide
 ├── spl/             # Literature benchmark: Single Power-Law (SPL) baryon profile
-│   ├── lmfp/        # Long Mean Free Path (LMFP) regime studies for SPL
-│   ├── initialization.py
-│   └── evolution.cpp
+│   └── lmfp/        # Long Mean Free Path (LMFP) regime studies for SPL
 ├── plummer/         # Thesis extension: Plummer baryon profile
 └── hernquist/       # Thesis extension: Hernquist baryon profile
 
@@ -37,6 +35,17 @@ Each subdirectory implements a different analytical static baryonic density *ρ*
 | `spl/` | Single Power-Law (SPL) | Benchmark (Feng et al., 2025) | 0.07 &middot; *r*<sup>&minus;2.4</sup> | *M*<sub>0</sub> &middot; *r*<sup>0.6</sup> |
 | `plummer/` | Plummer | Exploratory Extension | (3*M*<sub>0</sub> / *a*<sub>s</sub><sup>3</sup>) &middot; (1 + *r*<sup>2</sup>/*a*<sub>s</sub><sup>2</sup>)<sup>&minus;5/2</sup> | *M*<sub>0</sub> &middot; (1 + *a*<sub>s</sub><sup>2</sup>/*r*<sup>2</sup>)<sup>&minus;3/2</sup> |
 | `hernquist/` | Hernquist | Exploratory Extension | (2*M*<sub>0</sub>*a*<sub>s</sub>) / [*r*(*r* + *a*<sub>s</sub>)<sup>3</sup>] | *M*<sub>0</sub> &middot; (1 + *a*<sub>s</sub>/*r*)<sup>&minus;2</sup> |
+
+### Heat Conduction Regimes (SMFP vs. LMFP)
+
+In the standard fluid formulation, the conductive luminosity *L*<sub>&chi;</sub> interpolates between the Short Mean Free Path (SMFP) and Long Mean Free Path (LMFP) regimes via an effective conductivity *&kappa;*<sub>eff</sub> = (*&kappa;*<sub>SMFP</sub><sup>&minus;1</sup> + *&kappa;*<sub>LMFP</sub><sup>&minus;1</sup>)<sup>&minus;1</sup>:
+
+- **SMFP Regime (Kn<sub>&chi;</sub> &ll; 1):**
+  *L*<sub>SMFP</sub> = &minus;4&pi;*r*<sup>2</sup> &middot; (3*b* / 2) &middot; (*v*<sub>1D</sub> / *&sigma;*) &middot; &part;*v*<sub>1D</sub><sup>2</sup>/&part;*r*
+- **LMFP Regime (Kn<sub>&chi;</sub> &gg; 1):**
+  *L*<sub>LMFP</sub> = &minus;4&pi;*r*<sup>2</sup> &middot; (3*a* / 2) &middot; *c* &middot; *&sigma;* &middot; *&rho;*<sub>&chi;</sub><sup>2</sup> &middot; *v*<sub>1D</sub><sup>3</sup> &middot; (4&pi;*G* *r*<sub>s</sub><sup>2</sup> *&rho;*<sub>s</sub>)<sup>&minus;1</sup> &middot; &part;*v*<sub>1D</sub><sup>2</sup>/&part;*r*
+
+The `spl/lmfp/` subdirectory isolates and investigates the **LMFP-dominated evolution** (corresponding to the conduction term implemented in `initialization.py` and `evolution.cpp` with *c* = `0.753`), neglecting the SMFP saturation limit (`1 / sigma` term) to study core-collapse dynamics in the weakly collisional limit.
 
 ## Prerequisites
 
