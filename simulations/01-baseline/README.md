@@ -13,7 +13,7 @@ The numerical framework and gravothermal fluid solver are adapted from the publi
 │   ├── initialization.py
 │   └── evolution.cpp
 ├── plummer/         # Thesis extension: Plummer baryon profile
-├── hernquist/       # Thesis extension: Hernquist baryon profile
+└── hernquist/       # Thesis extension: Hernquist baryon profile
 
 ```
 
