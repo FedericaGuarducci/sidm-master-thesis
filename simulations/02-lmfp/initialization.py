@@ -6,24 +6,24 @@ from datetime import datetime
 
 
 # ==============================================================================
-# 1. Configurazione
+# 1. Configuration
 # ==============================================================================
-# Imposta precisione ad alta accuratezza per mpmath
+# Set high-precision arithmetic for mpmath
 mp.mp.dps = 25
 
 # ----------------------
 # USER CONFIGURATION
 # ----------------------
-base_path = r"C:\Users\feddy\Desktop\FedeFISICA\Gaggero\Programmi\10-LMFP\CodiceStandard"
+base_path = "."
 
-# Parametri del modello SIDM e barionici
+# SIDM and baryonic model parameters
 c = mp.mpf('0.753')
 
 my_mass_norm = mp.mpf('0.1')
-my_scale_norm = mp.mpf('0.1')  # Mantenuto per compatibilità di firme
+my_scale_norm = mp.mpf('0.1')  # Kept for function signature compatibility
 my_sigma = mp.mpf('0.5')
 
-# Griglia lagrangiana 1D
+# 1D Lagrangian grid
 r_min = mp.mpf('0.005')
 r_max = mp.mpf('500.0')
 layer = 180
@@ -32,43 +32,47 @@ extra_layer = 10
 my_tag = "20261007-180layers"
 
 # ==============================================================================
-# 2. Definizione delle funzioni massa e densità
+# 2. Mass and Density Profile Definitions
 # ==============================================================================
 # Dark Matter (NFW)
 def density_dm(r):
-    """Dark matter density function, assuming a NFW profile"""
+    """Dark matter density function, assuming an NFW profile."""
     return 1 / (r * (1 + r)**2)
 
 def mass_dm(r):
-    """Dark matter mass function, assuming a NFW profile"""
+    """Dark matter enclosed mass function, assuming an NFW profile."""
     return -r / (1 + r) + mp.log(1 + r)
 
-# SPL barioni
+# SPL Baryons
 def density_baryon(r, mass_norm):
+    """Single-Power-Law (SPL) baryon density profile."""
     return mp.mpf('0.07') * (r)**(-mp.mpf('2.4'))
 
 def mass_baryon(r, mass_norm):
+    """Single-Power-Law (SPL) baryon enclosed mass profile."""
     return mass_norm * (r)**(mp.mpf('0.6'))
 
-# Totali (DM + Barioni SPL)
+# Total (DM + SPL Baryons)
 def density_total(r, mass_norm):
+    """Total density profile (DM + SPL baryons)."""
     return density_dm(r) + density_baryon(r, mass_norm)
 
 def mass_total(r, mass_norm):
+    """Total enclosed mass profile (DM + SPL baryons)."""
     return mass_dm(r) + mass_baryon(r, mass_norm)
 
 # ==============================================================================
-# 3. Equazione di Jeans e Luminosità per SPL
+# 3. Jeans Equation and Luminosity for SPL (LMFP Regime)
 # ==============================================================================
 def vd_dm(r_target, mass_norm, ars=None):
-    """Calcola v_d(r) integrando numericamente l'equazione di Jeans"""
+    """Compute 1D velocity dispersion v_d(r) by numerically integrating the Jeans equation."""
     r_target = mp.mpf(r_target)
     
     def integrand(r):
         r = mp.mpf(r)
         return density_dm(r) * mass_total(r, mass_norm) / (r**2)
     
-    # Integrazione fino a r_max per stabilità e velocità
+    # Integrate up to r_max for numerical stability and speed
     integral = mp.quad(integrand, [r_target, r_max])
     rho_target = density_dm(r_target)
     
@@ -77,34 +81,34 @@ def vd_dm(r_target, mass_norm, ars=None):
 
 def big_dev(r, mass_norm, ars=None):
     """
-    Derivata d(vd^2)/dr esatta dall'equazione di Jeans per SPL:
+    Exact derivative d(vd^2)/dr from the Jeans equation for SPL:
     d(vd^2)/dr = -G*M_tot(r)/r^2 - vd^2(r) * (1/rho_dm * d(rho_dm)/dr)
     """
     r_val = mp.mpf(r)
     vd_val = vd_dm(r_val, mass_norm)
     
-    # Termine gravitazionale -G * M_tot(r) / r^2
+    # Gravitational term: -G * M_tot(r) / r^2
     grav_term = -mass_total(r_val, mass_norm) / (r_val**2)
     
-    # Termine d(log rho_dm)/dr per il profilo NFW: -(1 + 3r) / (r*(1+r))
+    # Logarithmic slope d(log rho_dm)/dr for the NFW profile: -(1 + 3r) / (r*(1+r))
     dlog_rho = -(1 + 3 * r_val) / (r_val * (1 + r_val))
     
     return grav_term - (vd_val**2) * dlog_rho
 
 def luminosity_dm(r, c, sigma, mass_norm, ars=None):
-    """Dark matter luminosity function"""
+    """Dark matter luminosity function in the Long Mean Free Path (LMFP) regime."""
     r_val = mp.mpf(r)
     
     density = density_dm(r_val)
     vd = vd_dm(r_val, mass_norm)
     bd = big_dev(r_val, mass_norm)
     
-    factor = -4*mp.pi*mp.mpf('0.27')* r_val**2*c * sigma * density * vd**3
+    factor = -4 * mp.pi * mp.mpf('0.27') * r_val**2 * c * sigma * density * vd**3
     
     return factor * bd
 
 # ==============================================================================
-# 4. Creazione della griglia e calcolo vettori
+# 4. Grid Generation and Profile Vector Calculation
 # ==============================================================================
 def log_space(start, stop, num):
     start_log = mp.log10(start)
@@ -122,7 +126,7 @@ def calculate_lists():
     u_list = [mp.mpf('1.5') * mp.re(v)**2 for v in vd_list]
     l_list = [luminosity_dm(r, c, my_sigma, my_mass_norm) for r in r_list1]
     
-    # Troncamento ai layer richiesti
+    # Truncate to the requested number of layers
     r_list1_trunc = r_list1[:layer]
     r_list2_trunc = r_list2[:layer]
     m_list_trunc = m_list[:layer]
@@ -131,7 +135,7 @@ def calculate_lists():
     vd_list_trunc = vd_list[:layer]
     l_list_trunc = l_list[:layer]
     
-    kn_list_trunc = [(1/(my_sigma * rho_list[i])) / 
+    kn_list_trunc = [(1 / (my_sigma * rho_list[i])) / 
                      mp.sqrt((2 * u_list[i]) / (3 * rho_list[i])) 
                      for i in range(layer)]
     
@@ -147,7 +151,7 @@ def calculate_lists():
     }
 
 # ==============================================================================
-# 5. Plotting e Salvataggio Dati
+# 5. Plotting and Data Export
 # ==============================================================================
 def plot_results(results):
     r1 = np.array([float(mp.re(r)) for r in results['r_list1_trunc']])
@@ -171,7 +175,7 @@ def plot_results(results):
     
     plt.legend()
     plt.grid(True, which="both", ls="-")
-    plt.title('SPL Baryon + NFW DM Initial Condition')
+    plt.title('SPL Baryon + NFW DM Initial Condition (LMFP)')
     plt.xlabel('r')
     plt.tight_layout()
     
@@ -194,6 +198,7 @@ def export_data(results, my_tag=None):
         f"sigma = {my_sigma}",
         "Initial dark matter profile = NFW",
         "Initial baryon profile = SPL",
+        "Regime = LMFP",
         f"rmin = {float(r_min)}",
         f"rmax = {float(r_max)}",
         f"Shell Number = {len(r_list1)}",
@@ -229,7 +234,7 @@ def export_data(results, my_tag=None):
     return output_dir
 
 # ==============================================================================
-# 6. Esecuzione principale
+# 6. Main Execution
 # ==============================================================================
 if __name__ == "__main__":
     results = calculate_lists()
@@ -239,5 +244,5 @@ if __name__ == "__main__":
     pdf_path = os.path.join(output_dir, "profile.pdf")
     plt_fig.savefig(pdf_path)
 
-    print(f"Calcolo ed esportazione completati con successo per SPL in:\n{output_dir}")
+    print(f"Calculation and export completed successfully for SPL (LMFP) in:\n{output_dir}")
 
