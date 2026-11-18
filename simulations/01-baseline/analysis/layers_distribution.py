@@ -14,13 +14,12 @@ plt.rcParams["mathtext.fontset"] = "cm"  # Use native LaTeX Computer Modern font
 # ==============================================================================
 # PATHS AND PHYSICAL PARAMETERS CONFIGURATION
 # ==============================================================================
-# Resolve path relative to this script's directory (e.g., inside analysis/)
 BASE_DIR = Path(__file__).resolve().parent
 target_filepath = (
     BASE_DIR / ".." / "spl" / "results" / "result_20261007-180layers.txt"
 ).resolve()
 
-# Scale radius r_s 
+# Scale radius r_s [kpc] to convert dimensionless radius (r / r_s) to physical kpc
 R_S = 3.2
 
 if not target_filepath.exists():
@@ -29,25 +28,25 @@ if not target_filepath.exists():
 print(f"[INFO] Target file selected: {target_filepath.name}")
 
 
-def find_inflection_radius(m_arr, rho_arr, r_norm_arr):
+def find_inflection_radius(m_arr, rho_arr, r_kpc_arr):
     """1. Identify the inflection mass M_inflect from log10(rho) vs log10(M).
-    2. Interpolate the corresponding dimensionless inflection radius (r/r_s)_inflect.
+    2. Interpolate the corresponding inflection radius r_inflect [kpc].
     """
-    if len(m_arr) == 0 or len(rho_arr) == 0 or len(r_norm_arr) == 0:
+    if len(m_arr) == 0 or len(rho_arr) == 0 or len(r_kpc_arr) == 0:
         return None, None
-    if not (len(m_arr) == len(rho_arr) == len(r_norm_arr)):
-        min_len = min(len(m_arr), len(rho_arr), len(r_norm_arr))
-        m_arr, rho_arr, r_norm_arr = (
+    if not (len(m_arr) == len(rho_arr) == len(r_kpc_arr)):
+        min_len = min(len(m_arr), len(rho_arr), len(r_kpc_arr))
+        m_arr, rho_arr, r_kpc_arr = (
             m_arr[:min_len],
             rho_arr[:min_len],
-            r_norm_arr[:min_len],
+            r_kpc_arr[:min_len],
         )
 
-    valid_mask = (r_norm_arr > 1e-6) & (m_arr > 1e-6) & (rho_arr > 0)
+    valid_mask = (r_kpc_arr > 1e-6) & (m_arr > 1e-6) & (rho_arr > 0)
 
     m_v = m_arr[valid_mask]
     rho_v = rho_arr[valid_mask]
-    r_v = r_norm_arr[valid_mask]
+    r_v = r_kpc_arr[valid_mask]
 
     if len(m_v) < 10:
         return None, None
@@ -94,9 +93,9 @@ def find_inflection_radius(m_arr, rho_arr, r_norm_arr):
         return None, None
 
     log_r_inflect = np.interp(np.log10(m_inflect), log_m, log_r)
-    r_inflect_norm = 10**log_r_inflect
+    r_inflect_kpc = 10**log_r_inflect
 
-    return r_inflect_norm, m_inflect
+    return r_inflect_kpc, m_inflect
 
 
 # ==============================================================================
@@ -191,22 +190,22 @@ with open(target_filepath, "r", encoding="utf-8", errors="ignore") as f:
         f.readline()  # L
 
         r_arr_raw = np.fromstring(line_r, dtype=float, sep=" ")
-        r_arr_norm = r_arr_raw / R_S
+        r_arr_kpc = r_arr_raw * R_S  # Convert dimensionless r/r_s to physical kpc
 
         rho_arr = np.fromstring(line_rho, dtype=float, sep=" ")
         m_arr = np.fromstring(line_m, dtype=float, sep=" ")
 
-        r_inflect_norm, m_inflect = find_inflection_radius(
-            m_arr, rho_arr, r_arr_norm
+        r_inflect_kpc, m_inflect = find_inflection_radius(
+            m_arr, rho_arr, r_arr_kpc
         )
 
         parsed_snapshots.append({
             "time": t_val,
             "step": step_val,
-            "R_norm": r_arr_norm,
+            "R_kpc": r_arr_kpc,
             "M": m_arr,
             "Rho": rho_arr,
-            "r_inflect_norm": r_inflect_norm,
+            "r_inflect_kpc": r_inflect_kpc,
             "m_inflect": m_inflect,
             "n_layers": curr_n,
             "prev_n_layers": prev_n,
@@ -224,7 +223,7 @@ print()
 # ==============================================================================
 # PHASE 3: PLOT GENERATION (2x4 GRID)
 # ==============================================================================
-r_all = [d["R_norm"] for d in parsed_snapshots]
+r_all = [d["R_kpc"] for d in parsed_snapshots]
 rmin = min([np.min(r) for r in r_all if np.min(r) > 0])
 rmax = max([np.max(r) for r in r_all])
 bins = np.logspace(np.log10(rmin), np.log10(rmax), 71)
@@ -244,10 +243,10 @@ colors = cm.plasma(np.linspace(0, 0.85, len(parsed_snapshots)))
 
 for i, (data, color) in enumerate(zip(parsed_snapshots, colors)):
     ax = axes[i]
-    r_data = data["R_norm"]
+    r_data = data["R_kpc"]
     current_step = data["step"]
     current_time = data["time"]
-    r_inflect_norm = data["r_inflect_norm"]
+    r_inflect_kpc = data["r_inflect_kpc"]
     m_inflect = data["m_inflect"]
     n_layers = data["n_layers"]
 
@@ -260,20 +259,20 @@ for i, (data, color) in enumerate(zip(parsed_snapshots, colors)):
         edgecolor=color,
     )
 
-    if r_inflect_norm is not None:
-        r_val, r_exp = f"{r_inflect_norm:.3e}".split("e")
+    if r_inflect_kpc is not None:
+        r_val, r_exp = f"{r_inflect_kpc:.3e}".split("e")
         r_exp = int(r_exp)
         r_str_formatted = f"{r_val} \\times 10^{{{r_exp}}}"
 
         ax.axvline(
-            x=r_inflect_norm,
+            x=r_inflect_kpc,
             color="black",
             linestyle="--",
             lw=1.5,
-            label=f"$r_{{inflect}}/r_s = {r_str_formatted}$",
+            label=f"$r_{{inflect}} = {r_str_formatted}\\ \\mathrm{{kpc}}$",
         )
         subtitle_text = (
-            f"$r/r_s = {r_str_formatted}$\n$(M = {m_inflect:.4f})$"
+            f"$r = {r_str_formatted}\\ \\mathrm{{kpc}}$\n$(M/M_0 = {m_inflect:.4f})$"
         )
     else:
         subtitle_text = "Inflection not detected"
@@ -291,7 +290,7 @@ for i, (data, color) in enumerate(zip(parsed_snapshots, colors)):
 for j in range(len(parsed_snapshots), len(axes)):
     axes[j].set_visible(False)
 
-fig.supxlabel(r"$r / r_s$", fontsize=12)
+fig.supxlabel(r"$r\ [\mathrm{kpc}]$", fontsize=12)
 fig.supylabel("Layer Count per Bin", fontsize=12)
 fig.suptitle(
     f"Selected {len(parsed_snapshots)} Snapshots of Layer Redistribution (Including Final)",
