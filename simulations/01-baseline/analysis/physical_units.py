@@ -28,7 +28,7 @@ output_dir = (BASE_DIR / "output").resolve()
 output_pdf_path = output_dir / f"{filepath.stem}_physical_plots.pdf"
 
 # ==============================================================================
-# 2. CONSTANTS & SCALE PARAMETERS FOR J1205-0000 HALO
+# 2. CONSTANTS & SCALE PARAMETERS 
 # ==============================================================================
 c_kms = 299792.458          # Speed of light [km/s]
 G_kpc = 4.30091e-6          # Gravitational constant [kpc (km/s)^2 / M_sun]
