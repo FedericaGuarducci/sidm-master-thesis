@@ -46,9 +46,9 @@ In the standard fluid formulation, the conductive luminosity *L*<sub>&chi;</sub>
 In dimensionless units (with radii scaled by *r*<sub>s</sub>, densities by *&rho;*<sub>s</sub>, 1D velocity dispersion by *v*<sub>0</sub> = (4&pi;*G*&rho;*<sub>s</sub>*r*<sub>s</sub><sup>2</sup>)<sup>1/2</sup>, and cross section *&sigma;* = (*&sigma;/*m*)&rho;*<sub>s</sub>*r*<sub>s</sub>), the conductive luminosity *L*<sub>&chi;</sub> interpolates between the Short Mean Free Path (SMFP) and Long Mean Free Path (LMFP) regimes via an effective conductivity *&kappa;*<sub>eff</sub> = (*&kappa;*<sub>SMFP</sub><sup>&minus;1</sup> + *&kappa;*<sub>LMFP</sub><sup>&minus;1</sup>)<sup>&minus;1</sup>:
 
 - **SMFP Regime (Kn<sub>&chi;</sub> &ll; 1):**
-  Lᵪ = −4πr²(2.1)νᵪ(m/σ)(∂νᵪ²/∂r)
+  *L*<sub>&chi;</sub> = &minus;4&pi;*r*<sup>2</sup>(2.1)*ν*<sub>&chi;</sub>(*m*/*σ*)(&part;*ν*<sub>&chi;</sub><sup>2</sup>/&part;*r*)
 - **LMFP Regime (Kn<sub>&chi;</sub> &gg; 1):**
-  Lᵪ = −4πr²(0.27C)ρᵪνᵪ³(σ/m)(∂νᵪ²/∂r)
+  *L*<sub>&chi;</sub> = &minus;4&pi;*r*<sup>2</sup>(0.27*C*)*ρ*<sub>&chi;</sub>*ν*<sub>&chi;</sub><sup>3</sup>(*σ*/*m*)(&part;*ν*<sub>&chi;</sub><sup>2</sup>/&part;*r*)
 
 
 
