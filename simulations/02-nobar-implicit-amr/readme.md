@@ -16,14 +16,14 @@
 
 ### Initial Conditions Generator
 ```bash
-python generate_initial.py
+python initialization.py
 ```
 
 ### C++ Evolution Code
 Compile with `g++` (C++17 standard required; **do not** use `-ffast-math` or `-Ofast` so `NaN`/`inf` checks remain valid):
 
 ```bash
-g++ -O3 -std=c++17 -march=native -fno-math-errno -DNDEBUG evolutionCN-nobar8-2OK.cpp -o evolve
+g++ -O3 -std=c++17 -march=native -fno-math-errno -DNDEBUG evolution.cpp -o evolve
 ```
 
 Run with default parameters or pass custom arguments via CLI:
@@ -69,7 +69,7 @@ Run with default parameters or pass custom arguments via CLI:
 | :--- | :--- | :--- | :--- |
 | **Time discretization** | Explicit | Implicit Crank-Nicolson solved via the Thomas algorithm | Unconditional numerical stability and larger allowable timesteps |
 | **Timestep formula & rollback** | Δt = ε / maxᵢ │(1 / uᵢ) · (Lᵢ − Lᵢ₋₁) / (Mᵢ − Mᵢ₋₁)│ | Δt = s · ε / maxᵢ │(1 / uᵢ) · (Lᵢ − Lᵢ₋₁) / (Mᵢ − Mᵢ₋₁)│ with adaptive scaling s ≤ 1; if a new entropy inversion occurs or relaxation fails to converge, the step is rolled back and s is halved | Prevents unphysical entropy inversions and eases hydrostatic convergence |
-| **ε parameter** | Constant ε = 0.001 | ε = 0.003 initially, increased to ε = 0.01 once ρ₀ / ρ<sub>s</sub> ≥ 10⁵ | Speeds up late-stage collapse without shifting the collapse timescale t<sub>s</sub> |
+| **ε parameter** | Constant ε = 0.001 | ε = 0.003 initially, increased to ε = 0.01 once ρ₀ / ρ<sub>s</sub> ≥ 10⁵ | Speeds up late-stage collapse without shifting the collapse timescale t<sub>c</sub> |
 
 ---
 
@@ -79,7 +79,7 @@ Run with default parameters or pass custom arguments via CLI:
 | **Linear system solver** | Cholesky factorization (`LDLT`, assuming symmetric positive-definite matrix) | In-place tridiagonal LU factorization with partial pivoting + diagonal equilibration | The exact hydrostatic Jacobian matrix is **not** symmetric |
 | **Radii monotonicity check** | Absent | Backtracking line search: halves ΔR until Rᵢ > Rᵢ₋₁ > 0 and R<sub>N-1</sub> < R<sub>N</sub> | Guarantees physical shell ordering and positive volumes |
 | **Iteration count** | Fixed 10 Newton iterations | Dynamic stopping once maxᵢ │ΔRᵢ / Rᵢ│ < 10⁻¹⁰ (up to 30 iterations; triggers timestep rollback if unconverged) | Exploits quadratic convergence to avoid redundant iterations |
-| **ρ and p updates** | First-order linearization in ΔR | Exact adiabatic volume scaling: ρ<sub>new</sub>= ρ<sub>old</sub> (V<sub>old</sub> / V<sub>new</sub>), p<sub>new</sub> = p<sub>old</sub> (V<sub>old</sub> / V<sub>new</sub>)⁵ᐟ³ | Higher accuracy and exact adiabatic conservation during large steps |
+| **ρ and p updates** | First-order linearization in ΔR | Exact adiabatic volume scaling: ρ<sub>new</sub> = ρ<sub>old</sub> (V<sub>old</sub> / V<sub>new</sub>), p<sub>new</sub> = p<sub>old</sub> (V<sub>old</sub> / V<sub>new</sub>)⁵ᐟ³ | Higher accuracy and exact adiabatic conservation during large steps |
 
 ---
 
