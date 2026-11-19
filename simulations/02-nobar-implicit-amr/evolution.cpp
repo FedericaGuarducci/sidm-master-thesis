@@ -32,8 +32,6 @@
 //    threshold (every 500 steps) and, afterward, driven by central density (one snapshot     //
 //    every SAVE_DLOG10_RHO decades of Rho(0)), 10 digits instead of 17, final snapshot       //
 //    guaranteed, aggregated adaptive meshing log. Physics is UNCHANGED.                      //
-// Compilation: g++ -O3 -std=c++17 -march=native -fno-math-errno -DNDEBUG evolutionCN-nobar8-2.cpp -o evolve //
-// Usage: evolve [tag] [inputDir] [outputFile] [totalStep] [adaptGap] [epsFine] [saveDlog10]  (no args: default)//
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <algorithm>
@@ -62,7 +60,7 @@ constexpr int    DEFAULT_TOTAL_STEPS      = 1000000000;
 constexpr int    DEFAULT_SAVE_STEPS       = 500;     // save every N steps BEFORE threshold RHO_SAVE_DENSE
 constexpr double EPS_NORMAL               = 0.003;   // max |du/u| per step, normal regime
 constexpr double EPS_FINE                 = 0.01;    // same when Rho(0) >= RHO_FINE (was 0.001; test: 0.01 shifts t(Rho0=1e8) by +0.017 out of ~423, with ~8x fewer steps)
-constexpr double RHO_FINE                 = 1e5;
+constexpr double RHO_FINE                 = 1e6;
 constexpr double RHO_SAVE_DENSE           = 1e6;     // from here on, saves track central density
 constexpr double SAVE_DLOG10_RHO          = 0.05;    // after threshold: new snapshot when log10(Rho(0)) has grown by this amount since the last one
 constexpr int    SAVE_MIN_GAP_AFTER       = 100;     // ... but never more often than once every 100 steps
@@ -117,7 +115,7 @@ struct Params {
 
     void setDefaultPaths() {
         inputDir   = "./initial/" + tag + "/";
-        outputFile = "./results8/result_" + tag + ".txt";
+        outputFile = "./results/result_" + tag + ".txt";
     }
     void display(const Logger& lg) const {
         lg.info("Initial profile: " + tag);
