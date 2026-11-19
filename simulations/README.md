@@ -1,72 +1,50 @@
-# SIDM Gravothermal Evolution Simulations
+# Simulation Post-Processing & Diagnostics
 
-1D Lagrangian fluid simulation suite for modeling the gravothermal core collapse of Self-Interacting Dark Matter (SIDM) halos. The repository contains the baseline reference implementations (with baryonic potentials), an optimized baryon-free Crank-Nicolson solver with Adaptive Mesh Refinement (AMR), and Python post-processing scripts.
+Python scripts for analyzing the gravothermal evolution outputs, verifying numerical convergence across grid resolutions, and converting dimensionless profiles into physical astrophysical units.
 
 ---
 
-## Repository Structure
+## Requirements
 
-```text
-simulations/
-├── 01-baseline/               # Original reference codes with baryonic profiles
-│   ├── hernquist/             # SIDM + Hernquist baryonic profile
-│   ├── plummer/               # SIDM + Plummer baryonic profile
-│   ├── spl/                   # SIDM + Single Power-Law (SPL) baryonic profile
-│   └── README.md              # Documentation for baseline simulations
-├── 02-nobar-implicit-amr/     # Optimized pure-SIDM solver (Crank-Nicolson + AMR)
-│   ├── evolution.cpp          # C++17 implicit solver with dynamic layer splitting/merging
-│   ├── initialization.py      # Arbitrary-precision NFW initial condition generator
-│   └── README.md              # Detailed changelog and technical documentation
-├── analysis/                  # Post-processing and plotting scripts
-│   ├── convergence_layers.py  # Layer-number independence tests (180 to 1000 layers)
-│   ├── dimensionless_units.py # Radial profile evolution in dimensionless units
-│   ├── layers_distribution.py # Histograms of dynamic shell redistribution over time
-│   └── physical_units.py      # Profile evolution converted to physical units (kpc, M☉, Myr)
-└── README.md                  # This overview file
+* Python 3.8+
+* `numpy`
+* `scipy` (for spline interpolation and derivative diagnostics)
+* `matplotlib`
+
+---
+
+## Scripts Overview
+
+* **`convergence_layers.py`:** Interpolates density profiles at an exact central density threshold (*ρ*<sub>c</sub> = 10<sup>17</sup>) across runs with different shell counts (*N*<sub>layers</sub>) and computes relative convergence ratios for collapse times and inner core masses (*M*<sub>in</sub> / *M*<sub>0</sub>).
+* **`dimensionless_units.py`:** Plots the time evolution of normalized density (*ρ*<sub>&chi;</sub> / *ρ*<sub>s</sub>) versus enclosed mass (*M*<sub>&chi;</sub> / *M*<sub>0</sub>) and identifies the asymptotic core mass at steepest logarithmic slope.
+* **`layers_distribution.py`:** Tracks the radial distribution of Lagrangian shells across snapshots and locates the inflection radius (*r*<sub>inflect</sub>) via spline second derivatives.
+* **`physical_units.py`:** Converts dimensionless simulation outputs into physical astrophysical units (kpc, M<sub>&odot;</sub>, Myr, *v*/*c*) and computes the radial Knudsen number profile (Kn = &lambda;<sub>mfp</sub> / *H*<sub>Jeans</sub>) using the fiducial scale parameters:
+  * **Scale density:** *ρ*<sub>s</sub> = 1.5 &times; 10<sup>8</sup> M<sub>&odot;</sub> / kpc<sup>3</sup>
+  * **Scale radius:** *r*<sub>s</sub> = 3.2 kpc
+  * **Characteristic mass:** *M*<sub>0</sub> = 4&pi;*ρ*<sub>s</sub>*r*<sub>s</sub><sup>3</sup> &approx; 6.18 &times; 10<sup>10</sup> M<sub>&odot;</sub>
+  * **Characteristic velocity:** *v*<sub>s</sub> = &radic;(4&pi;*G*&rho;<sub>s</sub>*r*<sub>s</sub><sup>2</sup>) &approx; 288.2 km/s
+  * **Characteristic timescale:** *t*<sub>0</sub> = 108.5 Myr
+  * **SIDM cross section per unit mass:** *&sigma;*/*m* = 0.01 cm<sup>2</sup> / g (2.0884 &times; 10<sup>&minus;12</sup> kpc<sup>2</sup> / M<sub>&odot;</sub>)
+
+---
+
+## Usage
+
+Run any diagnostic script from inside `analysis/`. Each script takes an optional path to the simulation output as its first argument; without it, it reads the default location listed below.
+
+| Script | Default input | Optional argument |
+| :--- | :--- | :--- |
+| `convergence_layers.py` | `../02-nobar-implicit-amr/results/` (all `result_*.txt`) | results directory |
+| `layers_distribution.py` | `../02-nobar-implicit-amr/results/result_20261006_180Layers_nobar.txt` | result file |
+| `physical_units.py` | `../01-baseline/spl/results/result_20261007-180layers.txt` | result file |
+| `dimensionless_units.py` | `../01-baseline/hernquist/results/` (plots the analytical Hernquist baryon model) | results directory |
+
+```bash
+cd analysis
+python convergence_layers.py                      # uses the default location
+python layers_distribution.py path/to/result_<tag>.txt
+python physical_units.py path/to/result_<tag>.txt
+python dimensionless_units.py path/to/results_dir
 ```
 
----
-
-## Modules Overview
-
-### 1. `01-baseline/`
-Contains the original explicit Lagrangian code configurations modeling SIDM halos embedded in different static baryonic potentials (**Hernquist**, **Plummer**, and **SPL**). Refer to `01-baseline/README.md` for details on the original numerical setup.
-
-### 2. `02-nobar-implicit-amr/`
-Contains the upgraded pure dark matter (baryon-free) evolution code. Key improvements include:
-- **Implicit Crank-Nicolson conduction** solved in 𝒪(N) via the Thomas algorithm.
-- **Exact tridiagonal LU hydrostatic relaxation** (replacing Cholesky factorization) with adaptive timestep rollback.
-- **Dynamic Layering (AMR):** automatic shell splitting (`ln(Rᵢ / Rᵢ₋₁) > 0.15`) and coarsening to resolve the inner core while keeping output files compact.
-
-See `02-nobar-implicit-amr/README.md` for the full list of physics, efficiency, and algorithmic modifications.
-
-### 3. `analysis/`
-Python scripts (`numpy`, `matplotlib`) to inspect simulation outputs and reproduce validation diagnostics:
-- **`dimensionless_units.py` & `physical_units.py`:** Plot density, velocity dispersion, enclosed mass, and Knudsen number profiles across snapshots.
-- **`layers_distribution.py`:** Tracks how AMR redistributes Lagrangian shells across logarithmic radial bins during core collapse.
-- **`convergence_layers.py`:** Compares collapse timescales and core masses across different initial grid resolutions.
-
----
-
-## Quick Start Workflow
-
-1. **Generate Initial Conditions:**
-   ```bash
-   cd 02-nobar-implicit-amr
-   python initialization.py
-   ```
-
-2. **Compile and Run the Simulation:**
-   ```bash
-   g++ -O3 -std=c++17 -march=native -fno-math-errno -DNDEBUG evolution.cpp -o evolve
-   ./evolve
-   ```
-
-3. **Run Analysis & Diagnostics:**
-   ```bash
-   cd ../analysis
-   python dimensionless_units.py
-   python physical_units.py
-   python layers_distribution.py
-   python convergence_layers.py
-   ```
+Figures are written to `analysis/output/` (or next to the script for `convergence_layers.py` if no output directory is given).
