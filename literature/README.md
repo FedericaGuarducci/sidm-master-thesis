@@ -17,7 +17,7 @@ This directory contains the core scientific papers and background references sup
 ### 1. Core References (`01-core-references/`)
 | File | Authors & Year | Focus / Relevance to Thesis |
 | :--- | :--- | :--- |
-| `Feng_et_al_2025.pdf` | Feng et al. (2025) | Core reference paper underlying the thesis framework and methodology. |
+| `Feng_et_al_2025_sidm.pdf` | Feng et al. (2025) | Core reference paper underlying the thesis framework and methodology. |
 
 ### 2. SIDM Theory & Gravothermal Evolution (`02-sidm-theory/`)
 | File | Authors & Year | Focus / Relevance to Thesis |
@@ -31,7 +31,7 @@ This directory contains the core scientific papers and background references sup
 | File | Authors & Year | Focus / Relevance to Thesis |
 | :--- | :--- | :--- |
 | `Bromm_Loeb_2003.pdf` | Bromm & Loeb (2003) | Direct collapse formation of the first SMBH seeds in metal-free pregalactic halos. |
-| `Shapiro_2005.pdf` | Shapiro (2005) | Black hole spin, radiative efficiency, and cosmological growth timelines for high-z quasars. |
+| `Shapiro_2004.pdf` | Shapiro (2004) | Black hole spin, radiative efficiency, and cosmological growth timelines for high-z quasars. |
 | `Volonteri_Rees_2005.pdf` | Volonteri & Rees (2005) | Rapid hierarchical assembly and early supercritical accretion of high-redshift black holes. |
 | `Begelman_et_al_2006.pdf` | Begelman, Volonteri & Rees (2006) | Formation of massive black hole seeds via direct collapse and quasi-star evolution. |
 | `Freese_et_al_2010.pdf` | Freese et al. (2010) | Supermassive Dark Stars powered by dark matter annihilation as progenitors of heavy BH seeds. |
@@ -40,4 +40,4 @@ This directory contains the core scientific papers and background references sup
 | `Sadowski_et_al_2014.pdf` | Sądowski et al. (2014) | Axisymmetric GRRMHD simulations of radiative accretion disks with sub-grid magnetic dynamo. |
 | `Inayoshi_et_al_2019.pdf` | Inayoshi, Visbal & Haiman (2019) | Comprehensive review on the assembly, seeding channels, and growth of the first massive black holes. |
 | `Matsuoka_et_al_2019.pdf` | Matsuoka et al. (2019) | Discovery of a low-luminosity quasar at $z > 7$, constraining early SMBH growth models. |
-| `Feng_et_al_2025_little_red_dots.pdf` | Feng, Yu & Zhong (2025) | Baryon-aided dark Bondi accretion in gravothermally collapsed SIDM halos as the origin of JWST *Little Red Dots*. |
+| `Feng_et_al_2025_ldr.pdf` | Feng, Yu & Zhong (2025) | Baryon-aided dark Bondi accretion in gravothermally collapsed SIDM halos as the origin of JWST *Little Red Dots*. |
