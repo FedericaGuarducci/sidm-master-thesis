@@ -17,7 +17,7 @@ mp.mp.dps = 25
 # ----------------------
 # Absolute path where output directories should be created
 # Change this to your desired output location
-base_path = r"C:\Users\feddy\Desktop\FedeFISICA\Gaggero\Programmi\9-CNNoBaryons"
+base_path = r"."
 
 # Model parameters
 # a,b,c are the parameters for the SIDM conductivity terms
