@@ -36,9 +36,7 @@ Each subdirectory implements a different analytical static baryonic density *ρ*
 | `plummer/` | Plummer | Exploratory Extension | (3*M*<sub>0</sub> / *a*<sub>s</sub><sup>3</sup>) &middot; (1 + *r*<sup>2</sup>/*a*<sub>s</sub><sup>2</sup>)<sup>&minus;5/2</sup> | *M*<sub>0</sub> &middot; (1 + *a*<sub>s</sub><sup>2</sup>/*r*<sup>2</sup>)<sup>&minus;3/2</sup> |
 | `hernquist/` | Hernquist | Exploratory Extension | (2*M*<sub>0</sub>*a*<sub>s</sub>) / [*r*(*r* + *a*<sub>s</sub>)<sup>3</sup>] | *M*<sub>0</sub> &middot; (1 + *a*<sub>s</sub>/*r*)<sup>&minus;2</sup> |
 
-### Heat Conduction Regimes (SMFP vs. LMFP)
 
-In the standard fluid formulation, the conductive luminosity *L*<sub>&chi;</sub> interpolates between the Short Mean Free Path (SMFP) and Long Mean Free Path (LMFP) regimes via an effective conductivity *&kappa;*<sub>eff</sub> = (*&kappa;*<sub>SMFP</sub><sup>&minus;1</sup> + *&kappa;*<sub>LMFP</sub><sup>&minus;1</sup>)<sup>&minus;1</sup>:
 
 
 ### Heat Conduction Regimes (SMFP vs. LMFP)
