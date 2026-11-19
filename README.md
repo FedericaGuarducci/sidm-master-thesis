@@ -23,7 +23,7 @@ sidm-master-thesis/
 * **[`literature/`](literature/)** — Reference literature and theoretical background on gravothermal fluid modeling of SIDM halos.
 * **[`simulations/`](simulations/README.md)** — Full simulation suite and analysis scripts:
   * **[`01-baseline/`](simulations/01-baseline/README.md):** Reference explicit Lagrangian simulations incorporating static baryonic potentials (Hernquist, Plummer, and Single Power-Law profiles).
-  * **[`02-nobar-implicit-amr/`](simulations/02-nobar-implicit-amr/README.md):** High-performance pure-SIDM C++17 implementation featuring an implicit Crank-Nicolson conduction step, exact tridiagonal Newton-Raphson hydrostatic relaxation, and dynamic layer splitting/coarsening.
+  * **[`02-nobar-implicit-amr/`](simulations/02-nobar-implicit-amr/README.md):** High-performance pure-SIDM C++17 implementation without baryons featuring an implicit Crank-Nicolson conduction step, exact tridiagonal Newton-Raphson hydrostatic relaxation, and dynamic layer splitting/coarsening.
   * **[`analysis/`](simulations/analysis/):** Post-processing scripts to evaluate layer convergence, shell redistribution, dimensionless profile evolution, and physical-unit scaling.
 
 ---
