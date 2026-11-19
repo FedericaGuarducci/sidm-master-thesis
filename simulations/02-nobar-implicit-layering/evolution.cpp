@@ -1,38 +1,39 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////
-// Evoluzione gravotermica SIDM (solo materia oscura, senza barioni)                          //
-// Conduzione Crank-Nicolson + rilassamento idrostatico (Newton), stessa fisica del codice    //
-// originale, ma:                                                                             //
-//  - niente Eigen: tutti i sistemi lineari sono tridiagonali -> O(N) invece di O(N^3)        //
-//    * conduzione: algoritmo di Thomas (matrice diagonalmente dominante)                     //
-//    * rilassamento: LU tridiagonale con pivoting parziale sul sistema ESATTO (la matrice    //
-//      idrostatica NON e' simmetrica, quindi ldlt era sbagliato)                             //
-//  - rho e p aggiornati in modo esatto da R (non linearizzato)                               //
-//  - Newton si ferma appena converge (max|dR/R| < NEWTON_TOL) invece di fare sempre 10 iter. //
-//  - passo rifiutato e ripetuto con dt dimezzato (rollback) se il rilassamento non converge  //
-//    o se la conduzione crea una NUOVA inversione di entropia                                //
-//  - VELOCITA': pow() sostituito da cbrt() (rho^(2/3), rho^(5/3), a); entropia riusata da s.a      //
-//    (pow in hasInversion solo se serve); Newton si ferma dopo la correzione < 1e-10 (convergenza      //
-//    quadratica: non serve l'iterazione di sola verifica); nessuna allocazione nel rilassamento; //
-//    kinv calcolato una volta per setup; output con std::to_chars (se disponibile).            //
-//  - ADAPTIVE MESHING: ogni ADAPT_EVERY step si scorrono TUTTI i gusci; ogni guscio con      //
-//    ln(R_i/R_{i-1}) > ADAPT_LOG_GAP viene diviso in due gusci di massa m_i/2 ciascuno.      //
-//    La scansione viene RIPETUTA (fino a ADAPT_MAX_PASS passaggi) finche' nessun guscio      //
-//    viola piu' il criterio; poi si ricalcolano le grandezze e si fa UN rilassamento         //
-//    idrostatico globale. L'unico criterio di splitting e' quello sui raggi.                 //
-//    (criterio e modalita' di splitting INVARIATI rispetto a evolutionCN-nobar8.cpp)         //
-//  - COARSENING (nuovo): lo splitting da solo non puo' mai togliere layer; quelli creati mentre //
-//    un guscio era "largo" restano anche quando, dopo la ricompressione, la regione diventa    //
-//    fittissima (nel plot N vs r: il picco a r/rs ~ 1e-2). Prima di splittare, ogni ADAPT_EVERY  //
-//    step si fondono (a passaggi ripetuti) le coppie di gusci adiacenti il cui guscio fuso ha     //
-//    ln(R_out/R_in) <= ADAPT_MERGE_FRAC * soglia di split e non e' piu' grossolano in massa   //
-//    del guscio piu' grossolano della griglia INIZIALE (protegge il nocciolo). Massa, volume  //
-//    ed energia interna si conservano esattamente; la fusione non puo' peggiorare l'entropia.  //
-//  - SPEED/SIZE (nobar8-2): epsilon fine alzato a 0.01 (SOLO dopo Rho(0)>=RHO_FINE; EPS_NORMAL invariato:    //
-//    alzarlo sposta t_c in modo apprezzabile); salvataggi radi prima della soglia (ogni 500 step) e, dopo,   //
-//    pilotati dalla densita' centrale (uno snapshot ogni SAVE_DLOG10_RHO decadi di Rho(0)), 10 cifre invece   //
-//    di 17, snapshot finale garantito, log dell'adaptive meshing aggregato. La fisica e' INVARIATA.          //
-// Compilazione: g++ -O3 -std=c++17 -march=native -fno-math-errno -DNDEBUG evolutionCN-nobar8-2.cpp -o evolve //
-// Uso: evolve [tag] [inputDir] [outputFile] [totalStep] [adaptGap] [epsFine] [saveDlog10]  (senza argomenti: default)//
+// Gravothermal evolution SIDM (dark matter only, no baryons)                                 //
+// Crank-Nicolson conduction + hydrostatic relaxation (Newton), same physics as original      //
+// code, except:                                                                              //
+//  - no Eigen: all linear systems are tridiagonal -> O(N) instead of O(N^3)                  //
+//    * conduction: Thomas algorithm (diagonally dominant matrix)                             //
+//    * relaxation: tridiagonal LU with partial pivoting on the EXACT system (the hydrostatic //
+//      matrix is NOT symmetric, so ldlt was incorrect)                                       //
+//  - rho and p updated exactly from R (not linearized)                                       //
+//  - Newton stops as soon as it converges (max|dR/R| < NEWTON_TOL) instead of always 10 iter.//
+//  - step rejected and retried with halved dt (rollback) if relaxation fails to converge     //
+//    or if conduction creates a NEW entropy inversion                                        //
+//  - SPEED: pow() replaced by cbrt() (rho^(2/3), rho^(5/3), a); entropy reused from s.a      //
+//    (pow in hasInversion only if needed); Newton stops after correction < 1e-10 (quadratic  //
+//    convergence: no verification-only iteration needed); zero allocations in relaxation;    //
+//    kinv computed once per setup; output via std::to_chars (if available).                  //
+//  - ADAPTIVE MESHING: every ADAPT_EVERY steps ALL shells are scanned; any shell with        //
+//    ln(R_i/R_{i-1}) > ADAPT_LOG_GAP is split into two shells of mass m_i/2 each.            //
+//    The scan is REPEATED (up to ADAPT_MAX_PASS passes) until no shell violates the          //
+//    criterion; then quantities are recomputed and ONE global hydrostatic relaxation is      //
+//    performed. The sole splitting criterion is based on radii.                              //
+//    (splitting criterion and method UNCHANGED compared to evolutionCN-nobar8.cpp)           //
+//  - COARSENING (new): splitting alone can never remove layers; those created while a shell  //
+//    was "wide" remain even when, after recompression, the region becomes very dense (in the //
+//    N vs r plot: the peak at r/rs ~ 1e-2). Before splitting, every ADAPT_EVERY steps,       //
+//    adjacent shell pairs are merged (in repeated passes) whose merged shell has             //
+//    ln(R_out/R_in) <= ADAPT_MERGE_FRAC * split threshold and is no coarser in mass than the //
+//    coarsest shell of the INITIAL grid (protects the core). Mass, volume, and internal      //
+//    energy are conserved exactly; merging cannot worsen entropy.                            //
+//  - SPEED/SIZE (nobar8-2): fine epsilon raised to 0.01 (ONLY after Rho(0)>=RHO_FINE;        //
+//    EPS_NORMAL unchanged: raising it shifts t_c noticeably); sparse saves before the        //
+//    threshold (every 500 steps) and, afterward, driven by central density (one snapshot     //
+//    every SAVE_DLOG10_RHO decades of Rho(0)), 10 digits instead of 17, final snapshot       //
+//    guaranteed, aggregated adaptive meshing log. Physics is UNCHANGED.                      //
+// Compilation: g++ -O3 -std=c++17 -march=native -fno-math-errno -DNDEBUG evolutionCN-nobar8-2.cpp -o evolve //
+// Usage: evolve [tag] [inputDir] [outputFile] [totalStep] [adaptGap] [epsFine] [saveDlog10]  (no args: default)//
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <algorithm>
@@ -50,44 +51,44 @@
 
 using Vec = std::vector<double>;
 
-// potenze frazionarie via cbrt (molto piu' veloce di std::pow)
+// fractional powers via cbrt (much faster than std::pow)
 static inline double pow23(double x) { double c = std::cbrt(x); return c * c; }       // x^(2/3)
 static inline double pow53(double x) { double c = std::cbrt(x); return x * c * c; }   // x^(5/3)
 
 // ---------------------------------------------------------------------------------------------
-// Configurazione
+// Configuration
 // ---------------------------------------------------------------------------------------------
 constexpr int    DEFAULT_TOTAL_STEPS      = 1000000000;
-constexpr int    DEFAULT_SAVE_STEPS       = 500;     // salvataggio ogni N step PRIMA della soglia RHO_SAVE_DENSE
-constexpr double EPS_NORMAL               = 0.003;    // max |du/u| per passo, regime normale
-constexpr double EPS_FINE                 = 0.01;    // idem quando Rho(0) >= RHO_FINE (era 0.001; test: 0.01 sposta t(Rho0=1e8) di +0.017 su ~423, con ~8x meno step)
+constexpr int    DEFAULT_SAVE_STEPS       = 500;     // save every N steps BEFORE threshold RHO_SAVE_DENSE
+constexpr double EPS_NORMAL               = 0.003;   // max |du/u| per step, normal regime
+constexpr double EPS_FINE                 = 0.01;    // same when Rho(0) >= RHO_FINE (was 0.001; test: 0.01 shifts t(Rho0=1e8) by +0.017 out of ~423, with ~8x fewer steps)
 constexpr double RHO_FINE                 = 1e5;
-constexpr double RHO_SAVE_DENSE           = 1e6;     // da qui in poi i salvataggi seguono la densita' centrale
-constexpr double SAVE_DLOG10_RHO          = 0.05;    // dopo la soglia: nuovo snapshot quando log10(Rho(0)) e' cresciuto di tanto dall'ultimo
-constexpr int    SAVE_MIN_GAP_AFTER       = 100;     // ... ma mai piu' spesso di una volta ogni 100 step
-constexpr int    SAVE_MAX_GAP_AFTER       = 20000;   // ... e comunque almeno ogni 20000 step (se Rho(0) ristagna)
-constexpr int    SAVE_PRECISION           = 10;      // cifre dopo la virgola in notazione scientifica (era 17)
-constexpr int    ADAPT_LOG_EVERY          = 20;      // riga di log dell'adaptive meshing ogni N chiamate (aggregata)
-constexpr double DEFAULT_DENSITY_THRESHOLD = 1e30;   // stop se Rho(0) supera questa soglia
-constexpr int    MAX_NEWTON_ITER          = 30;      // iterazioni massime del rilassamento
-constexpr double NEWTON_TOL               = 1e-10;   // convergenza: correzione max|dR/R| < tol (dopo averla applicata l'errore e' ~tol^2)
-constexpr int    MAX_HALVINGS_NEWTON      = 40;      // backtracking dentro il Newton
-constexpr int    MAX_STEP_RETRIES         = 60;      // dimezzamenti di dt per un passo rifiutato
-constexpr double ENTROPY_TOL              = 1e-6;    // tolleranza relativa inversione entropia
-constexpr bool   STOP_ON_NEW_INVERSION    = false;   // true: ferma invece di ridurre dt (come il vecchio controllo)
+constexpr double RHO_SAVE_DENSE           = 1e6;     // from here on, saves track central density
+constexpr double SAVE_DLOG10_RHO          = 0.05;    // after threshold: new snapshot when log10(Rho(0)) has grown by this amount since the last one
+constexpr int    SAVE_MIN_GAP_AFTER       = 100;     // ... but never more often than once every 100 steps
+constexpr int    SAVE_MAX_GAP_AFTER       = 20000;   // ... and at least every 20000 steps anyway (if Rho(0) stagnates)
+constexpr int    SAVE_PRECISION           = 10;      // decimal places in scientific notation (was 17)
+constexpr int    ADAPT_LOG_EVERY          = 20;      // adaptive meshing log line every N calls (aggregated)
+constexpr double DEFAULT_DENSITY_THRESHOLD = 1e30;   // stop if Rho(0) exceeds this threshold
+constexpr int    MAX_NEWTON_ITER          = 30;      // maximum relaxation iterations
+constexpr double NEWTON_TOL               = 1e-10;   // convergence: correction max|dR/R| < tol (after applying it, error is ~tol^2)
+constexpr int    MAX_HALVINGS_NEWTON      = 40;      // backtracking inside Newton
+constexpr int    MAX_STEP_RETRIES         = 60;      // dt halvings for a rejected step
+constexpr double ENTROPY_TOL              = 1e-6;    // relative entropy inversion tolerance
+constexpr bool   STOP_ON_NEW_INVERSION    = false;   // true: stop instead of reducing dt (like the old check)
 
 // --- adaptive meshing ---
 constexpr bool   ADAPTIVE_MESHING         = true;
-constexpr int    ADAPT_EVERY              = 50;      // ogni quanti step si controlla la griglia
-constexpr double ADAPT_LOG_GAP            = 0.15;    // soglia sul salto g_i = log(R_i/R_{i-1}): UNICO criterio
-constexpr bool   ADAPT_USE_LN             = true;    // true: log NATURALE (0.15 = 0.065 dex); false: log10
-                                                     // NB: la griglia iniziale ha ln(R_i/R_{i-1}) = 0.061 (0.026 dex),
-                                                     // quindi con log10 la soglia 0.15 e' 5.7x la spaziatura iniziale
-constexpr int    ADAPT_MAX_PASS           = 60;      // passaggi massimi di splitting per chiamata
-                                                     // (ogni passaggio riduce il salto di ~0.1 dex al massimo)
-constexpr int    ADAPT_MAX_LAYERS         = 20000;   // tetto di sicurezza al numero di gusci
-constexpr double ADAPT_MERGE_FRAC         = 0.65;    // fusione se il guscio fuso ha gap <= FRAC * soglia di split (FRAC<1: isteresi)
-constexpr bool   ADAPT_COARSEN            = true;    // fusione dei gusci sovracampionati (false = comportamento di nobar8)
+constexpr int    ADAPT_EVERY              = 50;      // how often (in steps) the grid is checked
+constexpr double ADAPT_LOG_GAP            = 0.15;    // threshold on gap g_i = log(R_i/R_{i-1}): SOLE criterion
+constexpr bool   ADAPT_USE_LN             = true;    // true: NATURAL log (0.15 = 0.065 dex); false: log10
+                                                     // NB: the initial grid has ln(R_i/R_{i-1}) = 0.061 (0.026 dex),
+                                                     // so with log10 the 0.15 threshold is 5.7x the initial spacing
+constexpr int    ADAPT_MAX_PASS           = 60;      // maximum splitting passes per call
+                                                     // (each pass reduces the gap by ~0.1 dex at most)
+constexpr int    ADAPT_MAX_LAYERS         = 20000;   // safety cap on the number of shells
+constexpr double ADAPT_MERGE_FRAC         = 0.65;    // merge if merged shell has gap <= FRAC * split threshold (FRAC<1: hysteresis)
+constexpr bool   ADAPT_COARSEN            = true;    // merge oversampled shells (false = nobar8 behavior)
 
 // ---------------------------------------------------------------------------------------------
 class Logger {
@@ -105,18 +106,18 @@ struct Params {
     int    saveStep  = DEFAULT_SAVE_STEPS;
     double epsilon   = EPS_NORMAL;
     double totalTime = 0.0;
-    double a = 2.257, b = 1.385, c = 0.753;   // parametri conducibilita' SIDM
-    double sigma = 0.001;                       // sezione d'urto normalizzata
-    double adaptGap = ADAPT_LOG_GAP;          // soglia sul salto log(R_i/R_{i-1}) (argv[5])
-    double epsFine  = EPS_FINE;               // epsilon dopo Rho(0)>=RHO_FINE (argv[6])
-    double saveDlog = SAVE_DLOG10_RHO;        // passo in log10(Rho(0)) tra snapshot dopo la soglia (argv[7]); 0 = ogni SAVE_MIN_GAP_AFTER step
-    std::string tag       = "20261006_1000Layers_nobar";
+    double a = 2.257, b = 1.385, c = 0.753;   // SIDM conductivity parameters
+    double sigma = 0.001;                       // normalized cross section
+    double adaptGap = ADAPT_LOG_GAP;          // threshold on gap log(R_i/R_{i-1}) (argv[5])
+    double epsFine  = EPS_FINE;               // epsilon after Rho(0)>=RHO_FINE (argv[6])
+    double saveDlog = SAVE_DLOG10_RHO;        // step in log10(Rho(0)) between snapshots after threshold (argv[7]); 0 = every SAVE_MIN_GAP_AFTER steps
+    std::string tag       = "20261006_180Layers_nobar";
     std::string inputDir  = "";
     std::string outputFile = "";
 
     void setDefaultPaths() {
-        inputDir   = "C:/Users/feddy/Desktop/FedeFISICA/Gaggero/Programmi/9-CNNoBaryons/initial/" + tag + "/";
-        outputFile = "C:/Users/feddy/Desktop/FedeFISICA/Gaggero/Programmi/9-CNNoBaryons/CN-nobarLayering/results8/result_" + tag + ".txt";
+        inputDir   = "./initial/" + tag + "/";
+        outputFile = "./results8/result_" + tag + ".txt";
     }
     void display(const Logger& lg) const {
         lg.info("Initial profile: " + tag);
@@ -144,9 +145,9 @@ static Vec readColumn(const std::string& filename) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Solutori tridiagonali
+// Tridiagonal solvers
 // ---------------------------------------------------------------------------------------------
-// Thomas (senza pivoting): sicuro solo per matrici diagonalmente dominanti (qui: matrice CN).
+// Thomas (without pivoting): safe only for diagonally dominant matrices (here: CN matrix).
 static void solveThomas(const Vec& lo, const Vec& di, const Vec& up, Vec rhs, Vec& x, Vec& cp) {
     const int n = (int)di.size();
     cp.assign(n, 0.0);
@@ -163,8 +164,8 @@ static void solveThomas(const Vec& lo, const Vec& di, const Vec& up, Vec rhs, Ve
     for (int i = n-2; i >= 0; --i) x[i] = rhs[i] - cp[i] * x[i+1];
 }
 
-// LU tridiagonale con pivoting parziale (stile LAPACK dgtsv), IN PLACE: dl, d, du, b vengono
-// distrutti; du2 (size max(n-2,0)) e x sono buffer di lavoro. Nessuna allocazione.
+// Tridiagonal LU with partial pivoting (LAPACK dgtsv style), IN PLACE: dl, d, du, b are
+// overwritten; du2 (size max(n-2,0)) and x are work buffers. Zero allocations.
 // dl[i] = T(i+1,i), d[i] = T(i,i), du[i] = T(i,i+1).
 static bool solveTridiagPivotInPlace(Vec& dl, Vec& d, Vec& du, Vec& b, Vec& x, Vec& du2) {
     const int n = (int)d.size();
@@ -195,26 +196,26 @@ static bool solveTridiagPivotInPlace(Vec& dl, Vec& d, Vec& du, Vec& b, Vec& x, V
 
 // ---------------------------------------------------------------------------------------------
 struct State {
-    Vec R, Rho, M, u, L, v, p, a;   // a = variabile adiabatica (entropia)
-    int n = 0;                      // numero di gusci (l'ultimo, n-1, e' fisso)
+    Vec R, Rho, M, u, L, v, p, a;   // a = adiabatic variable (entropy)
+    int n = 0;                      // number of shells (the last one, n-1, is fixed)
 };
 
 class Simulator {
     Params params;
     State  s;
     Logger logger;
-    int    N = 0;                   // gusci mobili = n-1
+    int    N = 0;                   // movable shells = n-1
 
-    // buffer riusati (evitano allocazioni a ogni step)
+    // reused buffers (avoid allocations at every step)
     Vec dUc, C, m, lo, di, up, rhs, xs, cp;
-    Vec hl, hd, hu, hb, dR;          // matrice idrostatica tridiagonale e termine noto
+    Vec hl, hd, hu, hb, dR;          // tridiagonal hydrostatic matrix and right-hand side
     Vec Rtry, Rhotry, ptry;
     Vec kv;                                      // 1/(R_i^3 - R_{i-1}^3)
-    Vec rdsc, rdl, rdd, rdu, rbs, rxs, rdu2;     // buffer del rilassamento (nessuna allocazione per iterazione)
-    Vec bu, bp, ba, bR, bRho;                    // backup per il rollback del passo
-    std::string saveBuf;                         // buffer di output
-    long adaptCalls = 0, adaptSplitsAcc = 0, adaptMergesAcc = 0; int adaptLayersFrom = 0, lastAdaptStep = 0;   // log aggregato
-    double mergeGapR = 0.0, mergeGapM = 0.0;     // soglie di fusione (ln R, ln M), fissate dalla griglia iniziale
+    Vec rdsc, rdl, rdd, rdu, rbs, rxs, rdu2;     // relaxation buffers (zero allocations per iteration)
+    Vec bu, bp, ba, bR, bRho;                    // backup for step rollback
+    std::string saveBuf;                         // output buffer
+    long adaptCalls = 0, adaptSplitsAcc = 0, adaptMergesAcc = 0; int adaptLayersFrom = 0, lastAdaptStep = 0;   // aggregated log
+    double mergeGapR = 0.0, mergeGapM = 0.0;     // merge thresholds (ln R, ln M), set from initial grid
 
 public:
     Simulator(const Params& p, const Logger& lg) : params(p), logger(lg) {}
@@ -241,10 +242,10 @@ public:
         }
         resizeBuffers();
 
-        // Soglie del coarsening: in ln R il guscio fuso non supera ADAPT_MERGE_FRAC * soglia di split
-        // (isteresi: un guscio appena fuso non viene ri-splittato subito, e i due figli di uno split
-        // fusi insieme darebbero ~ la soglia intera, quindi non vengono rifusi); in ln M non supera il
-        // guscio piu' grossolano della griglia iniziale (il nocciolo non viene mai coarsato).
+        // Coarsening thresholds: in ln R the merged shell does not exceed ADAPT_MERGE_FRAC * split threshold
+        // (hysteresis: a freshly merged shell is not immediately re-split, and the two children of a split
+        // merged back together would give ~ the full threshold, so they are not re-merged); in ln M it does
+        // not exceed the coarsest shell of the initial grid (the core is never coarsened).
         {
             double gR0 = 0.0, gM0 = 0.0;
             for (int i = 1; i < s.n; ++i) {
@@ -258,12 +259,12 @@ public:
             logger.info("Coarsening thresholds: ln R gap <= " + std::to_string(mergeGapR) +
                         ", ln M gap <= " + std::to_string(mergeGapM) + (ADAPT_COARSEN ? "" : "  (coarsening OFF)"));
         }
-        // controllo di coerenza del guscio 0 (sfera piena): massa = Rho R^3 / 3
+        // consistency check for shell 0 (solid sphere): mass = Rho R^3 / 3
         {
             const double r0 = s.Rho[0] * s.R[0] * s.R[0] * s.R[0] / (3.0 * s.M[0]);
             if (std::fabs(r0 - 1.0) > 1e-2)
-                logger.info("ATTENZIONE: nel file iniziale Rho[0]*R[0]^3/(3*M[0]) = " + std::to_string(r0) +
-                            " (atteso 1): Rho[0] non e' coerente con M[0]; lasciato invariato.");
+                logger.info("WARNING: in initial file Rho[0]*R[0]^3/(3*M[0]) = " + std::to_string(r0) +
+                            " (expected 1): Rho[0] is inconsistent with M[0]; left unchanged.");
         }
 
         logger.info("Number of layers: " + std::to_string(s.n));
@@ -272,7 +273,7 @@ public:
         logger.info("Initial rho inner most: " + std::to_string(s.Rho[0]));
         logger.info("Initial rho next to outer most: " + std::to_string(s.Rho[s.n-1]));
 
-        std::ofstream f(params.outputFile, std::ofstream::out | std::ofstream::trunc);   // trunc: niente piu' run accodati
+        std::ofstream f(params.outputFile, std::ofstream::out | std::ofstream::trunc);   // trunc: no more appended runs
         if (!f.is_open()) throw std::runtime_error("Failed to open output file: " + params.outputFile);
         f << "Input profile name: " << params.tag << '\n'
           << "Initial time: " << params.totalTime << '\n'
@@ -297,19 +298,19 @@ public:
         std::ofstream out(params.outputFile, std::ofstream::out | std::ofstream::app);
         if (!out.is_open()) throw std::runtime_error("Failed to open output file: " + params.outputFile);
 
-        bool   dense = false;                 // true dopo Rho(0) >= RHO_SAVE_DENSE
+        bool   dense = false;                 // true after Rho(0) >= RHO_SAVE_DENSE
         int    lastSaveStep = 0, lastDone = 0;
         double lastSaveLogRho = std::log10(s.Rho[0]);
         double timeComp = 0.0;
-        double dtScale  = 1.0;       // memoria del fattore di riduzione di dt
+        double dtScale  = 1.0;       // memory of the dt reduction factor
         long   rejected = 0;
 
         for (int tstep = 1; tstep < params.totalStep + 1; ++tstep) {
             try {
                 params.epsilon = (s.Rho[0] >= RHO_FINE) ? params.epsFine : EPS_NORMAL;
-                const bool inverted0 = hasInversion();   // gia' invertita prima del passo?
+                const bool inverted0 = hasInversion();   // already inverted before the step?
 
-                // --- passo con rollback: conduzione + rilassamento, dt dimezzato se rifiutato ---
+                // --- step with rollback: conduction + relaxation, dt halved if rejected ---
                 bu.assign(s.u.begin(), s.u.end()); bp.assign(s.p.begin(), s.p.end()); ba.assign(s.a.begin(), s.a.end());
                 bR.assign(s.R.begin(), s.R.end()); bRho.assign(s.Rho.begin(), s.Rho.end());
                 double scale = std::min(1.0, 2.0 * dtScale);
@@ -319,8 +320,8 @@ public:
                 for (int attempt = 0; attempt < MAX_STEP_RETRIES; ++attempt) {
                     deltat = conductionStep(scale);
                     if (!inverted0 && hasInversion()) {
-                        if (STOP_ON_NEW_INVERSION) throw std::runtime_error("inversione di entropia");
-                        why = "inversione di entropia";
+                        if (STOP_ON_NEW_INVERSION) throw std::runtime_error("entropy inversion");
+                        why = "entropy inversion";
                     } else {
                         try { relaxationStep(); ok = true; }
                         catch (const std::exception& e) { why = e.what(); }
@@ -330,11 +331,11 @@ public:
                     s.u = bu; s.p = bp; s.a = ba; s.R = bR; s.Rho = bRho;
                     scale *= 0.5; ++rejected;
                 }
-                if (!ok) throw std::runtime_error("passo rifiutato " + std::to_string(MAX_STEP_RETRIES) +
-                                                  " volte, ultimo motivo: " + why);
+                if (!ok) throw std::runtime_error("step rejected " + std::to_string(MAX_STEP_RETRIES) +
+                                                  " times, last reason: " + why);
                 dtScale = scale;
 
-                // somma compensata (Kahan) del tempo
+                // compensated (Kahan) time summation
                 double y = deltat - timeComp;
                 double tmp = params.totalTime + y;
                 timeComp = (tmp - params.totalTime) - y;
@@ -365,14 +366,14 @@ public:
                                  ", layers = " + std::to_string(s.n) + ", dt scale = " + std::to_string(dtScale));
                 }
 
-                // adaptive meshing (dopo il salvataggio: lo snapshot dello step resta sulla vecchia griglia)
+                // adaptive meshing (after saving: the step snapshot remains on the old grid)
                 if (ADAPTIVE_MESHING && tstep % ADAPT_EVERY == 0) adaptMesh(tstep);
             } catch (const std::exception& e) {
                 logger.error("Error during simulation step " + std::to_string(tstep) + ": " + e.what());
                 break;
             }
         }
-        // snapshot finale (stato coerente: ultimo passo completato; non se R e' nan/negativo)
+        // final snapshot (consistent state: last completed step; not if R is nan/negative)
         if (lastDone > lastSaveStep && std::isfinite(s.R[0]) && s.R[0] > 0.0) {
             saveResults(out, lastDone);
             logger.info("Final snapshot saved at step " + std::to_string(lastDone));
@@ -396,30 +397,30 @@ private:
         return false;
     }
 
-    // entropia a = (2/3) u rho^(-2/3) deve essere non decrescente verso l'esterno
+    // entropy a = (2/3) u rho^(-2/3) must be non-decreasing outward
     bool hasInversion() const {
-        // Percorso veloce: se OGNI interfaccia ha a_{i+1} >= a_i (1 + 1e-9) non c'e' inversione
-        // (margine >> arrotondamento, quindi il risultato coincide con la formula esatta). s.a e'
-        // coerente con (u, rho). Niente pow.
+        // Fast path: if EVERY interface has a_{i+1} >= a_i (1 + 1e-9) there is no inversion
+        // (margin >> rounding error, so the result matches the exact formula). s.a is
+        // consistent with (u, rho). No pow.
         bool clear = true;
         for (int i = 0; i < N; ++i)
-            if (!(s.a[i+1] >= s.a[i] * (1.0 + 1e-9))) { clear = false; break; }   // vero anche con NaN
+            if (!(s.a[i+1] >= s.a[i] * (1.0 + 1e-9))) { clear = false; break; }   // true even with NaN
         if (clear) return false;
 
-        // Percorso esatto (identico al codice originale). Serve quando due gusci hanno entropia quasi
-        // uguale (es. figli di uno split): qui l'esito dipende dagli arrotondamenti, quindi si
-        // mantiene la stessa formula di prima per non cambiare il comportamento.
+        // Exact path (identical to the original code). Needed when two shells have nearly equal
+        // entropy (e.g. children of a split): here the outcome depends on rounding, so the
+        // exact same formula as before is kept to avoid changing behavior.
         double a0 = (2.0/3.0) * s.u[0] * std::pow(s.Rho[0], -2.0/3.0);
         for (int i = 0; i < N; ++i) {
             double a1 = (2.0/3.0) * s.u[i+1] * std::pow(s.Rho[i+1], -2.0/3.0);
-            if (!(a1 >= a0 * (1.0 - ENTROPY_TOL))) return true;   // vero anche con NaN
+            if (!(a1 >= a0 * (1.0 - ENTROPY_TOL))) return true;   // true even with NaN
             a0 = a1;
         }
         return false;
     }
 
     // -----------------------------------------------------------------------------------------
-    // Conduzione Crank-Nicolson (a rho, R fissi). dt = scale * epsilon / max|(dL/dm)/u|
+    // Crank-Nicolson conduction (at fixed rho, R). dt = scale * epsilon / max|(dL/dm)/u|
     // -----------------------------------------------------------------------------------------
     double conductionStep(double scale) {
         double maxc = 0.0;
@@ -438,7 +439,7 @@ private:
             return (s.Rho[i] * vi3) / (params.a * params.c * sigma2 * s.Rho[i] * vi2 + params.b);
         };
 
-        // coefficienti C_i tali che L_i = -C_i (u_{i+1} - u_i)
+        // coefficients C_i such that L_i = -C_i (u_{i+1} - u_i)
         C[0] = (s.R[0] * s.R[0] / s.R[1]) * abc_s * (term(0) + term(1));
         for (int i = 1; i < N; ++i)
             C[i] = (s.R[i] * s.R[i] / (s.R[i+1] - s.R[i-1])) * abc_s * (term(i) + term(i+1));
@@ -446,7 +447,7 @@ private:
         m[0] = s.M[0];
         for (int i = 1; i < N; ++i) m[i] = s.M[i] - s.M[i-1];
 
-        // A u^{n+1} = B u^n + bordo; A tridiagonale diagonalmente dominante -> Thomas
+        // A u^{n+1} = B u^n + boundary; A tridiagonal diagonally dominant -> Thomas
         for (int i = 0; i < N; ++i) {
             double al = (i > 0) ? 0.5 * (deltat / m[i]) * C[i-1] : 0.0;
             double ar = 0.5 * (deltat / m[i]) * C[i];
@@ -456,7 +457,7 @@ private:
             double r = (1.0 - al - ar) * s.u[i];
             if (i > 0) r += al * s.u[i-1];
             if (i < N-1) r += ar * s.u[i+1];
-            else         r += 2.0 * ar * s.u[N];          // bordo esterno fisso
+            else         r += 2.0 * ar * s.u[N];          // fixed outer boundary
             rhs[i] = r;
         }
         solveThomas(lo, di, up, rhs, xs, cp);
@@ -470,16 +471,16 @@ private:
     }
 
     // -----------------------------------------------------------------------------------------
-    // Matrice idrostatica tridiagonale: H(i,i-1)=hl[i], H(i,i)=hd[i], H(i,i+1)=hu[i]; termine noto hb
-    // (stesse formule del codice originale)
+    // Tridiagonal hydrostatic matrix: H(i,i-1)=hl[i], H(i,i)=hd[i], H(i,i+1)=hu[i]; RHS hb
+    // (same formulas as the original code)
     // -----------------------------------------------------------------------------------------
     void setupHydrostatic() {
         const Vec& R = s.R; const Vec& rho = s.Rho; const Vec& p = s.p; const Vec& M = s.M;
-        for (int i = 1; i < N; ++i) {              // 1/(R_i^3 - R_{i-1}^3), una sola volta per setup
+        for (int i = 1; i < N; ++i) {              // 1/(R_i^3 - R_{i-1}^3), once per setup
             double d = R[i] - R[i-1];
             kv[i] = 1.0 / (d * (R[i]*R[i] + R[i]*R[i-1] + R[i-1]*R[i-1]));
         }
-        // riga 0
+        // row 0
         {
             double R0 = R[0], R02 = R0*R0, R03 = R02*R0, R04 = R02*R02, R1 = R[1];
             double k1 = kv[1];
@@ -488,7 +489,7 @@ private:
             hu[0] = M[0]*(rho[0]+rho[1]) - 20.0*R02*p[1]*R1*R1*k1 - 3.0*M[0]*rho[1]*R1*R1*R1*k1;
             hb[0] = -4.0*R02*(p[1]-p[0]) - M[0]*(rho[0]+rho[1])*R1;
         }
-        // righe intermedie 1 .. N-2
+        // intermediate rows 1 .. N-2
         for (int i = 1; i < N-1; ++i) {
             double Ri = R[i], Ri2 = Ri*Ri, Ri4 = Ri2*Ri2;
             double Rm = R[i-1], Rm2 = Rm*Rm, Rp = R[i+1], Rp2 = Rp*Rp;
@@ -500,7 +501,7 @@ private:
             hu[i] = M[i]*(rho[i]+rho[i+1]) - 20.0*Ri2*p[i+1]*Rp2*kp - 3.0*M[i]*dRr*rho[i+1]*Rp2*kp;
             hb[i] = -4.0*Ri2*(p[i+1]-p[i]) - M[i]*(rho[i]+rho[i+1])*dRr;
         }
-        // ultima riga mobile N-1 (R[N] fisso)
+        // last movable row N-1 (R[N] fixed)
         {
             int l = N-1;
             double Rl = R[l], Rl2 = Rl*Rl, Rl4 = Rl2*Rl2, Rm = R[l-1], Rm2 = Rm*Rm, R1 = R[l+1];
@@ -511,18 +512,18 @@ private:
         }
     }
 
-    // volume (R_i^3 - R_{i-1}^3) in forma stabile
+    // volume (R_i^3 - R_{i-1}^3) in stable form
     static inline double shellVol(double Ri, double Rm) {
         return (Ri - Rm) * (Ri*Ri + Ri*Rm + Rm*Rm);
     }
 
-    // Candidato R + sc*dR: R, rho, p esatti (adiabatico: rho ~ 1/V, p ~ V^(-5/3)). Ritorna false se inammissibile.
+    // Candidate R + sc*dR: exact R, rho, p (adiabatic: rho ~ 1/V, p ~ V^(-5/3)). Returns false if inadmissible.
     bool buildTrial(double sc, std::string* msg = nullptr) {
         double prev = 0.0;
         for (int i = 0; i < N; ++i) {
             double Rn = s.R[i] + sc * dR[i];
             if (!std::isfinite(Rn) || Rn <= prev) {
-                if (msg) *msg = "R non crescente/finito al guscio " + std::to_string(i);
+                if (msg) *msg = "R non-increasing/non-finite at shell " + std::to_string(i);
                 return false;
             }
             double Vold = shellVol(s.R[i], i ? s.R[i-1] : 0.0);
@@ -531,25 +532,25 @@ private:
             double rn = s.Rho[i] * ratio;
             double pn = s.p[i] * pow53(ratio);
             if (!(rn > 0.0) || !(pn > 0.0) || !std::isfinite(rn) || !std::isfinite(pn)) {
-                if (msg) *msg = "rho o p non validi al guscio " + std::to_string(i);
+                if (msg) *msg = "invalid rho or p at shell " + std::to_string(i);
                 return false;
             }
             Rtry[i] = Rn; Rhotry[i] = rn; ptry[i] = pn;
             prev = Rn;
         }
-        if (!(prev < s.R[N])) { if (msg) *msg = "guscio N-1 raggiunge il guscio fisso"; return false; }
+        if (!(prev < s.R[N])) { if (msg) *msg = "shell N-1 reaches the fixed shell"; return false; }
         return true;
     }
 
     // -----------------------------------------------------------------------------------------
-    // Rilassamento idrostatico: Newton con soluzione tridiagonale esatta, equilibratura diagonale
-    // e backtracking. Si ferma appena converge.
+    // Hydrostatic relaxation: Newton with exact tridiagonal solve, diagonal equilibration,
+    // and backtracking. Stops as soon as it converges.
     // -----------------------------------------------------------------------------------------
     void relaxationStep() {
         for (int it = 0; it < MAX_NEWTON_ITER; ++it) {
             setupHydrostatic();
 
-            // equilibratura simmetrica H' = D H D, b' = D b, deltaR = D x'
+            // symmetric equilibration H' = D H D, b' = D b, deltaR = D x'
             for (int i = 0; i < N; ++i) rdsc[i] = 1.0 / std::sqrt(std::max(std::fabs(hd[i]), 1e-300));
             for (int i = 0; i < N; ++i) {
                 rdd[i] = rdsc[i] * hd[i] * rdsc[i];
@@ -560,35 +561,35 @@ private:
                 }
             }
             if (!solveTridiagPivotInPlace(rdl, rdd, rdu, rbs, rxs, rdu2))
-                throw std::runtime_error("relaxation: matrice idrostatica singolare (iter " + std::to_string(it) + ")");
+                throw std::runtime_error("relaxation: singular hydrostatic matrix (iter " + std::to_string(it) + ")");
             double maxrel = 0.0;
             for (int i = 0; i < N; ++i) {
                 dR[i] = rdsc[i] * rxs[i];
                 maxrel = std::max(maxrel, std::fabs(dR[i] / s.R[i]));
             }
 
-            // backtracking: dimezza il passo finche' e' ammissibile
+            // backtracking: halve step until admissible
             double sc = 1.0; int h = 0; std::string msg;
             while (!buildTrial(sc, &msg) && h < MAX_HALVINGS_NEWTON) { sc *= 0.5; ++h; }
             if (h >= MAX_HALVINGS_NEWTON && !buildTrial(sc, &msg))
-                throw std::runtime_error("relaxation: nessun passo ammissibile (iter " + std::to_string(it) +
+                throw std::runtime_error("relaxation: no admissible step (iter " + std::to_string(it) +
                                          "): " + msg);
             for (int i = 0; i < N; ++i) { s.R[i] = Rtry[i]; s.Rho[i] = Rhotry[i]; s.p[i] = ptry[i]; }
 
-            // convergenza quadratica: dopo aver applicato una correzione piena < NEWTON_TOL l'errore residuo
-            // e' ~NEWTON_TOL^2, quindi un'ulteriore iterazione "di verifica" sarebbe solo tempo perso
+            // quadratic convergence: after applying a full correction < NEWTON_TOL the residual error
+            // is ~NEWTON_TOL^2, so an additional "verification" iteration would just waste time
             if (sc == 1.0 && maxrel < NEWTON_TOL) return;
         }
-        // Non convergito entro MAX_NEWTON_ITER: accettato solo se l'ultima correzione e' piccola
-        // (altrimenti il passo viene rifiutato e ripetuto con dt dimezzato)
+        // Did not converge within MAX_NEWTON_ITER: accepted only if the last correction is small
+        // (otherwise the step is rejected and retried with halved dt)
         setupHydrostatic();
         double res = 0.0;
         for (int i = 0; i < N; ++i) res = std::max(res, std::fabs(dR[i] / s.R[i]));
-        if (res > 1e-6) throw std::runtime_error("relaxation: Newton non converge (|dR/R|=" + std::to_string(res) + ")");
+        if (res > 1e-6) throw std::runtime_error("relaxation: Newton fails to converge (|dR/R|=" + std::to_string(res) + ")");
     }
 
     // -----------------------------------------------------------------------------------------
-    // (Ri)dimensiona i buffer di lavoro dopo un cambio del numero di gusci
+    // Resize work buffers after a change in the number of shells
     // -----------------------------------------------------------------------------------------
     void resizeBuffers() {
         N = s.n - 1;
@@ -603,28 +604,28 @@ private:
 
     // -----------------------------------------------------------------------------------------
     // Adaptive meshing.
-    // Convenzione: il guscio i sta tra R[i-1] e R[i], ha massa m_i = M[i]-M[i-1], densita' Rho[i]
-    // uniforme. UNICO criterio: g_i = log(R_i/R_{i-1}) > ADAPT_LOG_GAP (gusci i = 1..N, cioe'
-    // tutti tranne il guscio 0, che non ha R[-1]).
+    // Convention: shell i lies between R[i-1] and R[i], has mass m_i = M[i]-M[i-1], and uniform
+    // density Rho[i]. SOLE criterion: g_i = log(R_i/R_{i-1}) > ADAPT_LOG_GAP (shells i = 1..N, i.e.,
+    // all except shell 0, which has no R[-1]).
     //
-    // Per ogni guscio che viola il criterio si inserisce un nodo R_new tale che i due gusci
-    // risultanti abbiano massa m_i/2 ciascuno:
-    //   - densita' uniforme nel guscio  =>  stesso volume per le due meta'  =>
+    // For each shell violating the criterion, a node R_new is inserted such that the two resulting
+    // shells each have mass m_i/2:
+    //   - uniform density in the shell  =>  equal volume for both halves  =>
     //        R_new^3 = (R_i^3 + R_{i-1}^3)/2
     //   - M_new = M[i-1] + m_i/2
-    //   - la variabile adiabatica a (entropia) resta quella del guscio originale in entrambe le
-    //     meta'; rho segue da massa/volume, p = a rho^(5/3), u = 1.5 a rho^(2/3), v da u, L da
+    //   - the adiabatic variable a (entropy) remains that of the original shell in both halves;
+    //     rho follows from mass/volume, p = a rho^(5/3), u = 1.5 a rho^(2/3), v from u, L from
     //     updateProfiles.
-    // Cosi' massa, energia interna ed entropia sono conservate.
+    // Thus mass, internal energy, and entropy are conserved.
     //
-    // La scansione viene RIPETUTA su tutta la griglia (splitPass) finche' nessun guscio supera
-    // la soglia (o si raggiunge ADAPT_MAX_PASS / ADAPT_MAX_LAYERS): un solo passaggio non basta
-    // perche' dividere un guscio con R_out >> R_in riduce il salto di soli ~0.1 dex (0.23 in ln).
-    // Alla fine si fa UN rilassamento idrostatico globale a tempo fermo. Se fallisce, si torna
-    // alla griglia di prima.
+    // The scan is REPEATED across the entire grid (splitPass) until no shell exceeds the threshold
+    // (or ADAPT_MAX_PASS / ADAPT_MAX_LAYERS is reached): a single pass is insufficient because
+    // splitting a shell with R_out >> R_in reduces the gap by only ~0.1 dex (0.23 in ln).
+    // Finally, ONE global hydrostatic relaxation is performed at frozen time. If it fails,
+    // the previous grid is restored.
     // -----------------------------------------------------------------------------------------
 
-    // Un passaggio: divide TUTTI i gusci che violano il criterio. Ritorna il numero di split.
+    // Single pass: splits ALL shells violating the criterion. Returns the number of splits.
     int splitPass() {
         if (s.n >= ADAPT_MAX_LAYERS) return 0;
 
@@ -633,7 +634,7 @@ private:
         new_R.reserve(cap); new_M.reserve(cap); new_Rho.reserve(cap); new_a.reserve(cap);
         new_u.reserve(cap); new_v.reserve(cap); new_p.reserve(cap); new_L.reserve(cap);
 
-        // Il primo nodo (R[0]) resta invariato
+        // The first node (R[0]) remains unchanged
         new_R.push_back(s.R[0]);   new_M.push_back(s.M[0]);
         new_Rho.push_back(s.Rho[0]); new_a.push_back(s.a[0]);
         new_u.push_back(s.u[0]);   new_v.push_back(s.v[0]);
@@ -657,13 +658,13 @@ private:
                 const double rhoLo  = rho0 * (0.5 * Vold) / Vlo;
                 const double rhoUp  = rho0 * (0.5 * Vold) / Vup;
 
-                // figlio interno (nodo intermedio Rnew)
+                // inner child (intermediate node Rnew)
                 new_R.push_back(Rnew);  new_M.push_back(Mnew);
                 new_Rho.push_back(rhoLo); new_a.push_back(a0);
                 new_u.push_back(0.0);   new_v.push_back(0.0);
                 new_p.push_back(a0 * pow53(rhoLo)); new_L.push_back(0.0);
 
-                // figlio esterno (nodo Rout)
+                // outer child (node Rout)
                 new_R.push_back(Rout);  new_M.push_back(s.M[i]);
                 new_Rho.push_back(rhoUp); new_a.push_back(a0);
                 new_u.push_back(0.0);   new_v.push_back(0.0);
@@ -671,7 +672,7 @@ private:
 
                 ++splits;
             } else {
-                // guscio normale: copia diretta
+                // normal shell: direct copy
                 new_R.push_back(Rout);  new_M.push_back(s.M[i]);
                 new_Rho.push_back(s.Rho[i]); new_a.push_back(s.a[i]);
                 new_u.push_back(s.u[i]); new_v.push_back(s.v[i]);
@@ -686,17 +687,17 @@ private:
         s.p   = std::move(new_p);   s.L = std::move(new_L);
         s.n   = (int)s.R.size();
         resizeBuffers();
-        updateProfiles();           // u, v, L coerenti con a e rho della nuova griglia
+        updateProfiles();           // u, v, L consistent with a and rho of the new grid
         return splits;
     }
 
-    // Coarsening: un passaggio. Fonde coppie DISGIUNTE di gusci adiacenti (i, i+1), 1 <= i <= N-2
-    // (il guscio 0 e il guscio fisso N non si toccano), se il guscio fuso [R[i-1], R[i+1]] non e' piu'
-    // grossolano della griglia iniziale: ln(R[i+1]/R[i-1]) <= mergeGapR e ln(M[i+1]/M[i-1]) <= mergeGapM.
-    // Guscio fuso: massa m = m_i + m_{i+1}, volume V = V_i + V_{i+1} (Rho = media pesata sul volume,
-    // coerente con m = Rho V / 3), energia interna conservata u = (m_i u_i + m_{i+1} u_{i+1}) / m,
-    // entropia a = (2/3) u Rho^(-2/3) e p = a Rho^(5/3) ricalcolate. La fusione e' rifiutata se
-    // produrrebbe un'inversione di entropia. Ritorna il numero di fusioni.
+    // Coarsening: single pass. Merges DISJOINT pairs of adjacent shells (i, i+1), 1 <= i <= N-2
+    // (shell 0 and fixed shell N are untouched), if the merged shell [R[i-1], R[i+1]] is no
+    // coarser than the initial grid: ln(R[i+1]/R[i-1]) <= mergeGapR and ln(M[i+1]/M[i-1]) <= mergeGapM.
+    // Merged shell: mass m = m_i + m_{i+1}, volume V = V_i + V_{i+1} (Rho = volume-weighted average,
+    // consistent with m = Rho V / 3), conserved internal energy u = (m_i u_i + m_{i+1} u_{i+1}) / m,
+    // entropy a = (2/3) u Rho^(-2/3) and p = a Rho^(5/3) recomputed. The merge is rejected if
+    // it would introduce an entropy inversion. Returns the number of merges.
     int mergePass() {
         if (!ADAPT_COARSEN || s.n < 8) return 0;
         const int n = s.n;
@@ -711,12 +712,12 @@ private:
             new_p.push_back(s.p[k]);     new_L.push_back(s.L[k]);
         };
 
-        keep(0);                                   // guscio 0: invariato
+        keep(0);                                   // shell 0: unchanged
         int merges = 0;
         int i = 1;
         while (i < n) {
             bool done = false;
-            if (i <= N - 2) {                      // la coppia (i, i+1) deve stare tra i gusci mobili
+            if (i <= N - 2) {                      // pair (i, i+1) must lie among movable shells
                 const double gR = std::log(s.R[i+1] / s.R[i-1]);
                 const double gM = std::log(s.M[i+1] / s.M[i-1]);
                 if (gR <= mergeGapR && gM <= mergeGapM) {
@@ -727,8 +728,8 @@ private:
                     const double rho = (s.Rho[i] * V1 + s.Rho[i+1] * V2) / (V1 + V2);
                     const double u   = (m1 * s.u[i] + m2 * s.u[i+1]) / (m1 + m2);
                     const double a   = (2.0/3.0) * u / pow23(rho);
-                    // l'entropia non deve peggiorare: il numero di interfacce invertite (stessa tolleranza di hasInversion)
-                    // non deve aumentare (una regione GIA' invertita puo' essere fusa, una monotona resta monotona)
+                    // entropy must not worsen: the number of inverted interfaces (same tolerance as hasInversion)
+                    // must not increase (an ALREADY inverted region can be merged, a monotonic one stays monotonic)
                     const double aPrev = new_a.back(), aNext = s.a[i+2];
                     auto bad = [](double lo, double hi) { return !(hi >= lo * (1.0 - ENTROPY_TOL)) ? 1 : 0; };
                     const int badBefore = bad(aPrev, s.a[i]) + bad(s.a[i], s.a[i+1]) + bad(s.a[i+1], aNext);
@@ -754,7 +755,7 @@ private:
         s.p   = std::move(new_p);   s.L = std::move(new_L);
         s.n   = (int)s.R.size();
         resizeBuffers();
-        updateProfiles();           // u, v, L coerenti con a e rho della nuova griglia
+        updateProfiles();           // u, v, L consistent with a and rho of the new grid
         return merges;
     }
 
@@ -762,8 +763,8 @@ private:
         const State backup = s;
         const int nBefore = s.n;
 
-        // 1) coarsening (prima dello splitting: un guscio appena splittato ha gap >= soglia/2 e non puo'
-        //    essere rifuso; un guscio appena fuso ha gap <= soglia/2 e non puo' essere ri-splittato)
+        // 1) coarsening (before splitting: a freshly split shell has gap >= threshold/2 and cannot
+        //    be re-merged; a freshly merged shell has gap <= threshold/2 and cannot be re-split)
         int merged = 0, mpasses = 0;
         for (int pass = 0; pass < ADAPT_MAX_PASS; ++pass) {
             int k = mergePass();
@@ -772,7 +773,7 @@ private:
             ++mpasses;
         }
 
-        // 2) splitting (criterio e modalita' invariati)
+        // 2) splitting (criterion and method unchanged)
         int total = 0, passes = 0;
         if (s.n < ADAPT_MAX_LAYERS) {
             for (int pass = 0; pass < ADAPT_MAX_PASS; ++pass) {
@@ -784,7 +785,7 @@ private:
         }
         if (total == 0 && merged == 0) return;
 
-        // Rilassamento globale unico su tutta la griglia modificata
+        // Single global relaxation on the entire modified grid
         try {
             updateProfiles();
             relaxationStep();
@@ -792,7 +793,7 @@ private:
         } catch (const std::exception& e) {
             s = backup;
             resizeBuffers();
-            logger.info("Adaptive meshing annullato allo step " + std::to_string(tstep) + ": " + e.what());
+            logger.info("Adaptive meshing canceled at step " + std::to_string(tstep) + ": " + e.what());
             return;
         }
 
@@ -802,13 +803,13 @@ private:
         flushAdaptLog(false);
     }
 
-    // riga di log aggregata ogni ADAPT_LOG_EVERY chiamate che hanno modificato la griglia
+    // aggregated log line every ADAPT_LOG_EVERY calls that modified the grid
     void flushAdaptLog(bool force) {
         if (adaptCalls == 0 || (!force && adaptCalls % ADAPT_LOG_EVERY != 0)) return;
         std::ostringstream os;
-        os << "Adaptive meshing: fino allo step " << lastAdaptStep << ", t = " << std::setprecision(10) << params.totalTime
-           << ", " << adaptCalls << " modifiche della griglia (" << adaptSplitsAcc << " split, " << adaptMergesAcc
-           << " fusioni), layer " << adaptLayersFrom << " -> " << s.n;
+        os << "Adaptive meshing: up to step " << lastAdaptStep << ", t = " << std::setprecision(10) << params.totalTime
+           << ", " << adaptCalls << " grid modifications (" << adaptSplitsAcc << " splits, " << adaptMergesAcc
+           << " merges), layers " << adaptLayersFrom << " -> " << s.n;
         logger.info(os.str());
         adaptCalls = 0; adaptSplitsAcc = 0; adaptMergesAcc = 0;
     }
@@ -832,7 +833,7 @@ private:
 
     void saveResults(std::ofstream& f, int tstep) {
 #if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
-        // stesso formato di std::scientific + setprecision(SAVE_PRECISION), ma ~10x piu' veloce dell'iostream
+        // same format as std::scientific + setprecision(SAVE_PRECISION), but ~10x faster than iostream
         saveBuf.clear();
         char tmp[64];
         auto put = [&](double x) {
@@ -859,7 +860,7 @@ int main(int argc, char** argv) {
     try {
         Logger logger(true);
 #if defined(__FAST_MATH__) || defined(_M_FP_FAST)
-        logger.info("ATTENZIONE: compilato con fast-math. Ricompila senza -ffast-math/-Ofast.");
+        logger.info("WARNING: compiled with fast-math. Recompile without -ffast-math/-Ofast.");
 #endif
         Params params;
         if (argc > 1) params.tag = argv[1];
