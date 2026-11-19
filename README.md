@@ -1,4 +1,4 @@
-# SIDM Master Thesis (`sidm-master-thesis`)
+# SIDM Master Thesis 
 
 Conducting-fluid 1D Lagrangian numerical solver (C++/Python) for simulating the gravothermal core collapse of Self-Interacting Dark Matter (SIDM) halos, both in the presence of static baryonic potentials and in the pure dark matter regime (implicit Crank-Nicolson scheme with Adaptive Mesh Refinement).
 
