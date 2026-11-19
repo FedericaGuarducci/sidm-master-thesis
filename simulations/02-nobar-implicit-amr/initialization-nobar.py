@@ -6,7 +6,7 @@ from datetime import datetime
 
 
 # ==============================================================================
-# 1. Configurazione
+# 1. Configuration
 # ==============================================================================
 
 # Set precision 
@@ -27,7 +27,7 @@ c = mp.mpf('0.753')
 # my_sigma is the normalized SIDM cross section (sigma/m)*rho_s*r_s
 my_sigma = mp.mpf('0.002')
 
-# 1D Lagragian zone parameters
+# 1D Lagrangian zone parameters
 r_min = mp.mpf('0.0000000005')  # default 10^-4
 r_max = mp.mpf('500.0')  # default 10^2
 layer = 180
@@ -39,7 +39,7 @@ extra_layer = 10
 my_tag = "20261006_180Layers_nobar"
 
 # ==============================================================================
-# 2. Definizione delle funzioni massa e densità
+# 2. Definition of mass and density functions
 # ==============================================================================
 #%%Dark matter
 def density_dm(r):
@@ -51,21 +51,21 @@ def mass_dm(r):
     return -r/(1+r) + mp.log(1+r)
 
 
-#%%Velocità calcolata con SPL
+#%%Velocity calculated with SPL
 def vd_dm(r_target):
-    """Calcola v_d(r) integrando numericamente l'equazione di Jeans"""
+    """Computes v_d(r) by numerically integrating the Jeans equation"""
     r_target = mp.mpf(r_target)
     
-    # Integrando di Jeans: rho_dm(r) * G * M_b(r) / r^2
+    # Jeans integrand: rho_dm(r) * G * M_b(r) / r^2
     def integrand(r):
         r = mp.mpf(r)
         return density_dm(r) * mass_dm(r) / (r**2)
     
-    # Integriamo dal raggio target al raggio massimo del box (r_max = 500)
+    # Integrate from the target radius to the maximum box radius (r_max = 500)
     integral = mp.quad(integrand, [r_target, mp.inf])
     rho_target = density_dm(r_target)
     
-    # v_d^2(r) = (1 / rho(r)) * Integrale
+    # v_d^2(r) = (1 / rho(r)) * Integral
     v_sq = integral / rho_target
     return mp.sqrt(v_sq)
 
@@ -101,7 +101,7 @@ def luminosity_dm(r, a, b, c, sigma):
     return factor * (numerator / denominator) * bd
 
 # ==============================================================================
-# 3. Creazione della griglia
+# 3. Grid creation
 # ==============================================================================
 # Create logarithmically spaced radius points
 def log_space(start, stop, num):
@@ -118,7 +118,7 @@ r_list1 = log_space(r_min, r_max, layer + extra_layer)
 r_list2 = [r_list1[0] / 2] + [(r_list1[i-1] + r_list1[i]) / 2 for i in range(1, len(r_list1))]
 
 # ==============================================================================
-# 4. Calcolo delle liste
+# 4. List calculation
 # ==============================================================================
 # Calculate lists
 def calculate_lists():
@@ -159,7 +159,7 @@ def calculate_lists():
     }
 
 # ==============================================================================
-# 5. Definizione delle funzioni di plotting e di salvataggio dati
+# 5. Definition of plotting and data saving functions
 # ==============================================================================
 # Plotting of results
 def plot_results(results):
@@ -190,7 +190,7 @@ def plot_results(results):
     
     return plt
 
-#Data exportation
+# Data export
 def export_data(results, my_tag=None):
     """Export data to files similar to the Mathematica export"""
     if my_tag is None:
@@ -258,7 +258,7 @@ def export_data(results, my_tag=None):
     return output_dir
 
 # ==============================================================================
-# 6. Esecuzione principale
+# 6. Main execution
 # ==============================================================================
 # Main execution
 if __name__ == "__main__":
