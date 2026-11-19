@@ -25,7 +25,7 @@ a = mp.mpf('2.257')
 b = mp.mpf('1.385')
 c = mp.mpf('0.753')
 # my_sigma is the normalized SIDM cross section (sigma/m)*rho_s*r_s
-my_sigma = mp.mpf('0.002')
+my_sigma = mp.mpf('0.001')
 
 # 1D Lagrangian zone parameters
 r_min = mp.mpf('0.0000000005')  # default 10^-4
