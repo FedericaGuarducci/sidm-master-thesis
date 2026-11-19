@@ -1,4 +1,4 @@
-# Simulation Post-Processing & Diagnostics (`analysis/`)
+# Simulation Post-Processing & Diagnostics
 
 Python scripts for analyzing the gravothermal evolution outputs, verifying numerical convergence across grid resolutions, and converting dimensionless profiles into physical astrophysical units.
 
